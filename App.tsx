@@ -1,6 +1,7 @@
+
 import React, { useState, useRef, useEffect } from 'react';
-import { Send, Bot, User, Mic, Sparkles, Menu, Plus, Activity } from 'lucide-react';
-import { ChatMessage, CryptoData } from './types';
+import { Send, Bot, User, Mic, Sparkles, Menu, Plus, Activity, MessageSquare, Trash2 } from 'lucide-react';
+import { ChatMessage, CryptoData, ChatSession } from './types';
 import { analyzeCoin, generateMarketReport } from './services/geminiService';
 import CryptoDashboard from './components/CryptoDashboard';
 
@@ -79,22 +80,107 @@ const FormattedMessage = ({ text }: { text: string }) => {
 
 const App: React.FC = () => {
   const [input, setInput] = useState('');
-  const [messages, setMessages] = useState<ChatMessage[]>([
-    { 
-      id: 'welcome', 
-      role: 'model', 
-      text: 'Hello! I am CryptoInsight AI. Ask me about any coin (e.g., "Analyze Solana") and I will generate comprehensive charts and data for you.' 
+  
+  // Initialize with one default session
+  const initialSessionId = 'init-session';
+  const [sessions, setSessions] = useState<ChatSession[]>([
+    {
+      id: initialSessionId,
+      title: 'New Chat',
+      date: Date.now(),
+      messages: [
+        { 
+          id: 'welcome', 
+          role: 'model', 
+          text: 'Hello! I am CryptoInsight AI. Ask me about any coin (e.g., "Analyze Solana") and I will generate comprehensive charts and data for you.' 
+        }
+      ]
     }
   ]);
+  const [activeSessionId, setActiveSessionId] = useState<string>(initialSessionId);
+  
+  // Messages state acts as the view for the active session
+  const [messages, setMessages] = useState<ChatMessage[]>(sessions[0].messages);
+  
   const [isLoading, setIsLoading] = useState(false);
   const [loadingStatus, setLoadingStatus] = useState<string>(''); // 'fetching-data' | 'analyzing' | ''
   const scrollRef = useRef<HTMLDivElement>(null);
+
+  // Sync messages to the active session whenever they change
+  useEffect(() => {
+    setSessions(prevSessions => {
+      return prevSessions.map(session => {
+        if (session.id === activeSessionId) {
+          // If it's the default "New Chat" title, try to name it after the first user message
+          let newTitle = session.title;
+          if (session.title === 'New Chat') {
+            const firstUserMsg = messages.find(m => m.role === 'user');
+            if (firstUserMsg && firstUserMsg.text) {
+              newTitle = firstUserMsg.text.slice(0, 30) + (firstUserMsg.text.length > 30 ? '...' : '');
+            }
+          }
+          return { ...session, messages: messages, title: newTitle };
+        }
+        return session;
+      });
+    });
+  }, [messages, activeSessionId]);
 
   useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
   }, [messages, isLoading, loadingStatus]);
+
+  const handleNewChat = () => {
+    const newId = Date.now().toString();
+    const newSession: ChatSession = {
+      id: newId,
+      title: 'New Chat',
+      date: Date.now(),
+      messages: [{
+        id: 'welcome',
+        role: 'model',
+        text: 'Ready for a new analysis. Which coin shall we look at?'
+      }]
+    };
+    
+    // Add new session to history, make it active, and update view
+    setSessions(prev => [newSession, ...prev]);
+    setActiveSessionId(newId);
+    setMessages(newSession.messages);
+    setIsLoading(false);
+  };
+
+  const loadSession = (sessionId: string) => {
+    const session = sessions.find(s => s.id === sessionId);
+    if (session) {
+      setActiveSessionId(sessionId);
+      setMessages(session.messages);
+      setIsLoading(false); // Reset loading state when switching
+    }
+  };
+
+  const deleteSession = (e: React.MouseEvent, sessionId: string) => {
+    e.stopPropagation(); // Prevent triggering loadSession
+    
+    const newSessions = sessions.filter(s => s.id !== sessionId);
+    
+    // If we deleted the active session
+    if (sessionId === activeSessionId) {
+       if (newSessions.length > 0) {
+         // Switch to the first available session
+         setActiveSessionId(newSessions[0].id);
+         setMessages(newSessions[0].messages);
+       } else {
+         // If all deleted, create a fresh one
+         handleNewChat();
+         return; 
+       }
+    }
+    
+    setSessions(newSessions);
+  };
 
   const handleSend = async () => {
     if (!input.trim()) return;
@@ -127,7 +213,7 @@ const App: React.FC = () => {
       // Step 2: Trigger the Analysis Agent
       setLoadingStatus('analyzing');
       
-      // Small delay to smooth the UX transition and let the user see the agent "thinking"
+      // Small delay to smooth the UX transition
       await new Promise(resolve => setTimeout(resolve, 1500));
       
       const reportText = await generateMarketReport(data);
@@ -163,31 +249,56 @@ const App: React.FC = () => {
   return (
     <div className="flex h-screen w-full bg-gemini-bg text-gemini-text overflow-hidden font-sans selection:bg-blue-500/30">
       
-      {/* Sidebar (Visual only for Gemini look) */}
-      <div className="hidden md:flex flex-col w-[260px] h-full bg-[#1e1f20] p-4 gap-4 shrink-0">
-        <div className="flex items-center gap-2 px-2 py-3 cursor-pointer hover:bg-white/5 rounded-lg transition-colors">
-          <Menu className="w-5 h-5 text-gray-400" />
-          <span className="font-medium text-gray-300">Menu</span>
+      {/* Sidebar */}
+      <div className="hidden md:flex flex-col w-[260px] h-full bg-[#1e1f20] p-4 gap-4 shrink-0 border-r border-white/5">
+        <div className="flex items-center gap-2 px-2 py-3 cursor-pointer hover:bg-white/5 rounded-lg transition-colors group">
+          <Menu className="w-5 h-5 text-gray-400 group-hover:text-white transition-colors" />
+          <span className="font-medium text-gray-300 group-hover:text-white transition-colors">Menu</span>
         </div>
         
         <button 
-          className="flex items-center gap-3 bg-[#2d2e2f] hover:bg-[#37393b] text-gray-200 px-4 py-3 rounded-full transition-all w-fit mb-4 shadow-lg"
-          onClick={() => setMessages([{ id: 'reset', role: 'model', text: 'Ready for a new analysis.' }])}
+          className="flex items-center gap-3 bg-[#2d2e2f] hover:bg-[#37393b] text-gray-200 px-4 py-3 rounded-full transition-all w-fit mb-2 shadow-lg hover:shadow-xl border border-white/5"
+          onClick={handleNewChat}
         >
            <Plus className="w-4 h-4" />
            <span className="text-sm font-medium">New Chat</span>
         </button>
 
-        <div className="flex-1 overflow-y-auto space-y-2">
-          <div className="px-3 text-xs font-medium text-gray-500 mb-2">Recent</div>
-          <div className="px-3 py-2 text-sm text-gray-300 hover:bg-white/5 rounded-lg cursor-pointer truncate">Bitcoin Analysis</div>
-          <div className="px-3 py-2 text-sm text-gray-300 hover:bg-white/5 rounded-lg cursor-pointer truncate">Ethereum Sentiment</div>
+        <div className="flex-1 overflow-y-auto space-y-1 custom-scrollbar pr-2">
+          <div className="px-3 text-xs font-medium text-gray-500 mb-2 uppercase tracking-wider">Recent</div>
+          
+          {sessions.map((session) => (
+            <div 
+              key={session.id}
+              onClick={() => loadSession(session.id)}
+              className={`group flex items-center justify-between px-3 py-2 text-sm rounded-lg cursor-pointer transition-all ${
+                activeSessionId === session.id 
+                  ? 'bg-blue-500/20 text-blue-100' 
+                  : 'text-gray-300 hover:bg-white/5 hover:text-white'
+              }`}
+            >
+              <div className="flex items-center gap-3 overflow-hidden">
+                <MessageSquare className={`w-4 h-4 shrink-0 ${activeSessionId === session.id ? 'text-blue-400' : 'text-gray-500'}`} />
+                <span className="truncate">{session.title}</span>
+              </div>
+              
+              <button 
+                onClick={(e) => deleteSession(e, session.id)}
+                className={`p-1 rounded-md hover:bg-red-500/20 hover:text-red-400 transition-colors opacity-0 group-hover:opacity-100 ${
+                    activeSessionId === session.id ? 'opacity-100' : ''
+                }`}
+                title="Delete chat"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          ))}
         </div>
 
         <div className="mt-auto px-2 py-2">
           <div className="flex items-center gap-2 text-xs text-gray-500">
-            <span className="w-2 h-2 rounded-full bg-green-500"></span>
-            San Francisco, CA
+            <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
+            System Operational
           </div>
         </div>
       </div>

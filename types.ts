@@ -1,3 +1,4 @@
+
 // Types for the data structure returned by the AI
 
 export interface PricePoint {
@@ -39,4 +40,11 @@ export interface ChatMessage {
     text?: string;
     data?: CryptoData;
     isLoading?: boolean;
+}
+
+export interface ChatSession {
+    id: string;
+    title: string;
+    date: number; // Timestamp
+    messages: ChatMessage[];
 }
