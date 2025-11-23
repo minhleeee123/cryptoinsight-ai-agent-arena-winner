@@ -145,6 +145,37 @@ Vercel should auto-detect:
 
 ---
 
+## 🛠️ NIXPACKS / ROLLUP BUILD ISSUE (Fix applied)
+
+If you see an error like:
+
+```
+Error: Cannot find module @rollup/rollup-linux-x64-gnu
+```
+
+This happens because Rollup may include optional, platform-native binaries that don't match the CI runtime. To avoid this during Nixpacks/CI builds we added a `.npmrc` with `optional=false`, which prevents npm from installing optional native binaries.
+
+What we changed:
+- Added `.npmrc` with `optional=false` at the repository root.
+
+Alternative fixes (if you still see issues):
+- In Railway/CI, set environment variable `NPM_CONFIG_OPTIONAL=false` for the build.
+- Remove `package-lock.json` and `node_modules` locally, then run `npm install` on a Linux machine (or in WSL) and commit the regenerated `package-lock.json`.
+
+Local recovery commands (run if you see the same error locally):
+```powershell
+# from repo root
+rm -r node_modules package-lock.json
+npm install
+npm run build
+```
+
+If you prefer Railway to skip optional deps only for CI, set this env var in Railway project settings:
+`NPM_CONFIG_OPTIONAL=false`
+
+
+---
+
 ## 🚨 TROUBLESHOOTING
 
 ### Issue: Railway says "No package.json found"
