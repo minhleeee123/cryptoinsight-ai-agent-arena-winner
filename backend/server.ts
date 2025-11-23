@@ -18,7 +18,15 @@ const app = express();
 const PORT = process.env.PORT || 3001;
 
 // Middleware
-app.use(cors());
+app.use(cors({
+  origin: [
+    'http://localhost:3000',           // Local development
+    'http://localhost:5173',           // Vite dev server
+    /\.vercel\.app$/,                  // Any Vercel deployment
+    /\.railway\.app$/                  // Railway preview deployments
+  ],
+  credentials: true
+}));
 app.use(express.json());
 
 // Health check

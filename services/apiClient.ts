@@ -1,7 +1,10 @@
 // API Client for Backend (IQ ADK)
 import { CryptoData, TransactionData, PortfolioItem } from "../types";
 
-const API_BASE_URL = 'http://localhost:3001';
+// Dynamic API URL based on environment
+// Development: http://localhost:3001
+// Production: Set VITE_API_URL in Vercel environment variables
+const API_BASE_URL = (import.meta as any).env?.VITE_API_URL || 'http://localhost:3001';
 
 // Helper function for API calls
 async function apiCall<T>(endpoint: string, data?: any): Promise<T> {
