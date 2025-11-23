@@ -1,13 +1,55 @@
-import { AgentBuilder, FunctionTool } from '@iqai/adk';
+import { AgentBuilder } from '@iqai/adk';
 import { z } from 'zod';
-import { CryptoData, ChatMessage, PortfolioItem, PricePoint, LongShortData, TransactionData, TokenDistribution, ProjectMetric } from "../types";
 
-// --- SCHEMA DEFINITIONS (Zod for ADK) ---
+// --- TYPES ---
+export interface PricePoint {
+  time: string;
+  price: number;
+}
 
+export interface TokenDistribution {
+  name: string;
+  value: number;
+}
+
+export interface LongShortData {
+  time: string;
+  long: number;
+  short: number;
+}
+
+export interface ProjectMetric {
+  subject: string;
+  A: number;
+  fullMark: number;
+}
+
+export interface CryptoData {
+  coinName: string;
+  currentPrice: number;
+  summary: string;
+  priceHistory: PricePoint[];
+  tokenomics: TokenDistribution[];
+  sentimentScore: number;
+  longShortRatio: LongShortData[];
+  projectScores: ProjectMetric[];
+}
+
+export interface TransactionData {
+  type: 'SEND' | 'SWAP' | 'BUY' | 'SELL';
+  token: string;
+  amount: number;
+  toAddress: string;
+  network: string;
+  estimatedGas: string;
+  summary: string;
+}
+
+// --- ZOD SCHEMAS ---
 const cryptoZodSchema = z.object({
-  coinName: z.string().describe("Name of the cryptocurrency"),
-  currentPrice: z.number().describe("Current price in USD"),
-  summary: z.string().describe("A brief analytical summary based on the provided real data."),
+  coinName: z.string(),
+  currentPrice: z.number(),
+  summary: z.string(),
   priceHistory: z.array(z.object({
     time: z.string(),
     price: z.number()
@@ -39,8 +81,7 @@ const transactionZodSchema = z.object({
   summary: z.string()
 });
 
-// --- REAL DATA FETCHING FUNCTIONS ---
-
+// --- COIN ID MAP ---
 const COIN_ID_MAP: Record<string, string> = {
   'BTC': 'bitcoin',
   'ETH': 'ethereum',
@@ -53,6 +94,7 @@ const COIN_ID_MAP: Record<string, string> = {
   'MATIC': 'matic-network'
 };
 
+// --- API FETCHING FUNCTIONS ---
 async function searchCoinGecko(query: string): Promise<{ id: string; symbol: string; name: string } | null> {
   try {
     const response = await fetch(`https://api.coingecko.com/api/v3/search?query=${encodeURIComponent(query)}`);
@@ -133,17 +175,13 @@ async function getLongShortRatio(symbol: string): Promise<LongShortData[] | null
 }
 
 // --- TRANSFORM LAYER ---
-// Transform ADK output to match CryptoData interface
-
 function transformADKOutput(adkResult: any): CryptoData {
-  // Handle price history
   const priceHistory: PricePoint[] = adkResult.priceHistory7D?.map((item: any) => ({
     time: item.date || item.time,
     price: item.price
   })) || adkResult.priceHistory || [];
 
-  // Handle sentiment score
-  let sentimentScore = 50; // Default
+  let sentimentScore = 50;
   if (typeof adkResult.marketSentiment === 'object') {
     sentimentScore = adkResult.marketSentiment.score || adkResult.marketSentiment.value;
   } else if (typeof adkResult.sentimentScore === 'number') {
@@ -151,16 +189,13 @@ function transformADKOutput(adkResult: any): CryptoData {
   } else if (typeof adkResult.sentiment === 'number') {
     sentimentScore = adkResult.sentiment;
   }
-  // If still default, try to extract from summary mentioning Fear & Greed Index
   if (sentimentScore === 50 && adkResult.summary?.includes('Fear & Greed Index')) {
     const match = adkResult.summary.match(/(\d+)\s*on\s*the\s*Fear\s*&\s*Greed\s*Index/i);
     if (match) sentimentScore = parseInt(match[1]);
   }
 
-  // Handle long/short ratio
   const longShortRatio: LongShortData[] = adkResult.longShortRatioBinance || adkResult.longShortRatio || [];
 
-  // Handle tokenomics - convert from various formats
   let tokenomics: TokenDistribution[] = [];
   if (adkResult.tokenomics?.supplyDistribution) {
     tokenomics = adkResult.tokenomics.supplyDistribution.map((item: any) => ({
@@ -170,7 +205,6 @@ function transformADKOutput(adkResult: any): CryptoData {
   } else if (Array.isArray(adkResult.tokenomics)) {
     tokenomics = adkResult.tokenomics;
   } else if (adkResult.tokenomics && typeof adkResult.tokenomics === 'object') {
-    // If it's an object with various properties, try to extract meaningful data
     tokenomics = Object.entries(adkResult.tokenomics)
       .filter(([key]) => !['maxSupply', 'circulatingSupply', 'totalSupply'].includes(key))
       .map(([key, value]) => ({
@@ -179,7 +213,6 @@ function transformADKOutput(adkResult: any): CryptoData {
       }));
   }
   
-  // If still empty, generate default Bitcoin-like distribution
   if (tokenomics.length === 0) {
     tokenomics = [
       { name: 'Miners/Early Adopters', value: 60 },
@@ -188,7 +221,6 @@ function transformADKOutput(adkResult: any): CryptoData {
     ];
   }
 
-  // Handle project scores - convert from object to array
   let projectScores: ProjectMetric[] = [];
   if (adkResult.projectScores && typeof adkResult.projectScores === 'object') {
     projectScores = Object.entries(adkResult.projectScores).map(([key, value]) => ({
@@ -212,13 +244,10 @@ function transformADKOutput(adkResult: any): CryptoData {
   };
 }
 
-// --- MAIN ANALYSIS FUNCTION WITH IQ ADK ---
-
-export const analyzeCoin = async (coinName: string): Promise<CryptoData> => {
-  // 1. Identify the coin
+// --- MAIN ANALYSIS FUNCTION ---
+export async function analyzeCoin(coinName: string): Promise<CryptoData> {
   const coinInfo = await searchCoinGecko(coinName);
   
-  // Prepare Real Data Variables
   let realPriceData: { history: PricePoint[], currentPrice: number } | null = null;
   let realSentiment = 50;
   let realLongShort: LongShortData[] | null = null;
@@ -229,7 +258,6 @@ export const analyzeCoin = async (coinName: string): Promise<CryptoData> => {
     identifiedName = coinInfo.name;
     identifiedSymbol = coinInfo.symbol;
     
-    // 2. Parallel Fetching of Real Data
     const [priceResult, sentimentResult, lsResult] = await Promise.all([
       getPriceAction(coinInfo.id),
       getSentiment(),
@@ -241,7 +269,6 @@ export const analyzeCoin = async (coinName: string): Promise<CryptoData> => {
     realLongShort = lsResult;
   }
 
-  // 3. Construct System Instruction with Real Data
   const systemInstruction = `
     You are a Crypto Data Aggregator. 
     I have fetched REAL-TIME data from external APIs. 
@@ -262,42 +289,37 @@ export const analyzeCoin = async (coinName: string): Promise<CryptoData> => {
   `;
 
   try {
-    // Use IQ ADK with structured output
     const builder = AgentBuilder
       .create("crypto_data_aggregator")
       .withModel("gemini-2.5-flash")
       .withInstruction(systemInstruction);
 
-    // @ts-ignore - buildWithSchema exists but type definition might be incomplete
+    // @ts-ignore
     const { runner } = await builder.buildWithSchema(cryptoZodSchema);
 
     const result = await runner.ask(`Generate the full JSON dashboard data for ${identifiedName}.`);
     
-    // ADK returns JSON string wrapped in code blocks, need to parse
     let parsedResult: any;
     if (typeof result === 'string') {
       const jsonMatch = result.match(/```json\s*([\s\S]*?)\s*```/);
       if (jsonMatch) {
         parsedResult = JSON.parse(jsonMatch[1]);
       } else {
-        // Try parsing directly if no code blocks
         parsedResult = JSON.parse(result);
       }
     } else {
       parsedResult = result;
     }
     
-    // Transform to match CryptoData interface
     return transformADKOutput(parsedResult);
   } catch (error) {
     console.error("AI Generation Error (ADK):", error);
     throw error;
   }
-};
+}
 
-// --- TRANSACTION PREVIEW WITH IQ ADK ---
-
-export const createTransactionPreview = async (userText: string): Promise<TransactionData> => {
+// --- TRANSACTION PREVIEW ---
+export async function createTransactionPreview(userText: string): Promise<TransactionData> {
   const systemInstruction = `
     You are a Web3 Transaction Agent. Your job is to extract transaction details from the user's natural language request.
     
@@ -321,12 +343,11 @@ export const createTransactionPreview = async (userText: string): Promise<Transa
       .withModel("gemini-2.5-flash")
       .withInstruction(systemInstruction);
 
-    // @ts-ignore - buildWithSchema exists but type definition might be incomplete
+    // @ts-ignore
     const { runner } = await builder.buildWithSchema(transactionZodSchema);
 
     const result = await runner.ask(`Parse this transaction request: "${userText}"`);
     
-    // Parse JSON string
     if (typeof result === 'string') {
       const jsonMatch = result.match(/```json\s*([\s\S]*?)\s*```/);
       if (jsonMatch) {
@@ -340,11 +361,10 @@ export const createTransactionPreview = async (userText: string): Promise<Transa
     console.error("Transaction Parse Error (ADK):", error);
     throw error;
   }
-};
+}
 
-// --- MARKET REPORT WITH IQ ADK ---
-
-export const generateMarketReport = async (data: CryptoData): Promise<string> => {
+// --- MARKET REPORT ---
+export async function generateMarketReport(data: CryptoData): Promise<string> {
   try {
     const dataString = JSON.stringify(data, null, 2);
     
@@ -372,11 +392,10 @@ export const generateMarketReport = async (data: CryptoData): Promise<string> =>
     console.error("Error generating report (ADK):", error);
     return "Unable to generate market report.";
   }
-};
+}
 
-// --- INTENT DETECTION WITH IQ ADK ---
-
-export const determineIntent = async (userMessage: string): Promise<{ type: 'ANALYZE' | 'CHAT' | 'PORTFOLIO_ANALYSIS' | 'TRANSACTION'; coinName?: string }> => {
+// --- INTENT DETECTION ---
+export async function determineIntent(userMessage: string): Promise<{ type: 'ANALYZE' | 'CHAT' | 'PORTFOLIO_ANALYSIS' | 'TRANSACTION'; coinName?: string }> {
   const intentSchema = z.object({
     type: z.enum(['ANALYZE', 'CHAT', 'PORTFOLIO_ANALYSIS', 'TRANSACTION']),
     coinName: z.string().optional()
@@ -396,42 +415,33 @@ export const determineIntent = async (userMessage: string): Promise<{ type: 'ANA
       .withModel("gemini-2.5-flash")
       .withInstruction(systemInstruction);
 
-    // @ts-ignore - buildWithSchema exists but type definition might be incomplete
+    // @ts-ignore
     const { runner } = await builder.buildWithSchema(intentSchema);
 
     const result = await runner.ask(`Classify intent: "${userMessage}"`);
     
-    // Parse JSON string
     if (typeof result === 'string') {
       const jsonMatch = result.match(/```json\s*([\s\S]*?)\s*```/);
       if (jsonMatch) {
-        return JSON.parse(jsonMatch[1]) as { type: 'ANALYZE' | 'CHAT' | 'PORTFOLIO_ANALYSIS' | 'TRANSACTION'; coinName?: string };
+        return JSON.parse(jsonMatch[1]);
       }
-      return JSON.parse(result) as { type: 'ANALYZE' | 'CHAT' | 'PORTFOLIO_ANALYSIS' | 'TRANSACTION'; coinName?: string };
+      return JSON.parse(result);
     }
     
-    return result as { type: 'ANALYZE' | 'CHAT' | 'PORTFOLIO_ANALYSIS' | 'TRANSACTION'; coinName?: string };
+    return result as any;
   } catch (error) {
     console.error("Intent Detection Error (ADK):", error);
     return { type: 'CHAT' };
   }
-};
+}
 
-// --- CHAT WITH IQ ADK (Session-based conversation) ---
-
-export const chatWithModel = async (
-  userMessage: string, 
-  history: ChatMessage[], 
-  contextData?: CryptoData
-): Promise<string> => {
+// --- CHAT ---
+export async function chatWithModel(userMessage: string, contextData?: CryptoData): Promise<string> {
   try {
     let systemInstruction = "You are CryptoInsight AI. You have access to real-time crypto tools.";
     if (contextData) {
       systemInstruction += `\nCURRENT CONTEXT: User is viewing dashboard for ${contextData.coinName}.\nData: ${JSON.stringify(contextData)}`;
     }
-
-    // Create session ID from history length to maintain conversation
-    const sessionId = `chat-session-${Date.now()}`;
 
     const { runner } = await AgentBuilder
       .create("cryptoinsight_chat")
@@ -439,48 +449,17 @@ export const chatWithModel = async (
       .withInstruction(systemInstruction)
       .build();
 
-    // For conversation history, we'd need to replay messages
-    // For simplicity in this implementation, we'll use the current message with context
-    const contextualMessage = history.length > 1 
-      ? `Previous context: ${history.slice(-3).map(h => `${h.role}: ${h.text}`).join('\n')}\n\nCurrent message: ${userMessage}`
-      : userMessage;
-
-    const response = await runner.ask(contextualMessage);
+    const response = await runner.ask(userMessage);
     
     return response;
   } catch (error) {
     console.error("Chat Error (ADK):", error);
     return "I'm having trouble connecting to the chat service.";
   }
-};
+}
 
-// --- PORTFOLIO REAL-TIME UPDATE (No change needed, pure API call) ---
-
-export const updatePortfolioRealTime = async (portfolio: PortfolioItem[]): Promise<PortfolioItem[]> => {
-  try {
-    const ids = portfolio.map(item => COIN_ID_MAP[item.symbol] || item.name.toLowerCase()).join(',');
-    
-    const response = await fetch(`https://api.coingecko.com/api/v3/simple/price?ids=${ids}&vs_currencies=usd`);
-    const prices = await response.json();
-
-    return portfolio.map(item => {
-      const id = COIN_ID_MAP[item.symbol] || item.name.toLowerCase();
-      const newPrice = prices[id]?.usd;
-      
-      if (newPrice) {
-        return { ...item, currentPrice: newPrice };
-      }
-      return item;
-    });
-  } catch (error) {
-    console.error("Error fetching portfolio prices:", error);
-    return portfolio;
-  }
-};
-
-// --- PORTFOLIO ANALYSIS WITH IQ ADK ---
-
-export const analyzePortfolio = async (portfolio: PortfolioItem[]): Promise<string> => {
+// --- PORTFOLIO ANALYSIS ---
+export async function analyzePortfolio(portfolio: any[]): Promise<string> {
   const systemInstruction = `
     You are a crypto portfolio analyst.
     Analyze the provided portfolio data and provide:
@@ -504,4 +483,27 @@ export const analyzePortfolio = async (portfolio: PortfolioItem[]): Promise<stri
     console.error("Portfolio Analysis Error (ADK):", error);
     return "Error analyzing portfolio.";
   }
-};
+}
+
+// --- PORTFOLIO UPDATE ---
+export async function updatePortfolioRealTime(portfolio: any[]): Promise<any[]> {
+  try {
+    const ids = portfolio.map((item: any) => COIN_ID_MAP[item.symbol] || item.name.toLowerCase()).join(',');
+    
+    const response = await fetch(`https://api.coingecko.com/api/v3/simple/price?ids=${ids}&vs_currencies=usd`);
+    const prices = await response.json();
+
+    return portfolio.map((item: any) => {
+      const id = COIN_ID_MAP[item.symbol] || item.name.toLowerCase();
+      const newPrice = prices[id]?.usd;
+      
+      if (newPrice) {
+        return { ...item, currentPrice: newPrice };
+      }
+      return item;
+    });
+  } catch (error) {
+    console.error("Error fetching portfolio prices:", error);
+    return portfolio;
+  }
+}

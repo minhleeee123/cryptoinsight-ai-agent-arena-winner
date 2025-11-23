@@ -2,7 +2,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Send, Bot, User, Mic, Sparkles, Menu, Plus, Activity, MessageSquare, Trash2, Wallet, TrendingUp, TrendingDown, ArrowLeft, Shield, Mail, PieChart, RefreshCw, Link2, X } from 'lucide-react';
 import { ChatMessage, CryptoData, ChatSession, PortfolioItem, TransactionData } from './types';
-import { analyzeCoin, generateMarketReport, determineIntent, chatWithModel, analyzePortfolio, updatePortfolioRealTime, createTransactionPreview } from './services/geminiService';
+import { analyzeCoin, generateMarketReport, determineIntent, chatWithModel, analyzePortfolio, updatePortfolioRealTime, createTransactionPreview } from './services/apiClient';
 import { connectToMetaMask, formatAddress } from './services/web3Service';
 import CryptoDashboard from './components/CryptoDashboard';
 import TransactionCard from './components/TransactionCard';
