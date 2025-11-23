@@ -1,6 +1,6 @@
 import { AgentBuilder, FunctionTool } from '@iqai/adk';
 import { z } from 'zod';
-import { CryptoData, ChatMessage, PortfolioItem, PricePoint, LongShortData, TransactionData } from "../types";
+import { CryptoData, ChatMessage, PortfolioItem, PricePoint, LongShortData, TransactionData, TokenDistribution, ProjectMetric } from "../types";
 
 // --- SCHEMA DEFINITIONS (Zod for ADK) ---
 
@@ -132,6 +132,86 @@ async function getLongShortRatio(symbol: string): Promise<LongShortData[] | null
   }
 }
 
+// --- TRANSFORM LAYER ---
+// Transform ADK output to match CryptoData interface
+
+function transformADKOutput(adkResult: any): CryptoData {
+  // Handle price history
+  const priceHistory: PricePoint[] = adkResult.priceHistory7D?.map((item: any) => ({
+    time: item.date || item.time,
+    price: item.price
+  })) || adkResult.priceHistory || [];
+
+  // Handle sentiment score
+  let sentimentScore = 50; // Default
+  if (typeof adkResult.marketSentiment === 'object') {
+    sentimentScore = adkResult.marketSentiment.score || adkResult.marketSentiment.value;
+  } else if (typeof adkResult.sentimentScore === 'number') {
+    sentimentScore = adkResult.sentimentScore;
+  } else if (typeof adkResult.sentiment === 'number') {
+    sentimentScore = adkResult.sentiment;
+  }
+  // If still default, try to extract from summary mentioning Fear & Greed Index
+  if (sentimentScore === 50 && adkResult.summary?.includes('Fear & Greed Index')) {
+    const match = adkResult.summary.match(/(\d+)\s*on\s*the\s*Fear\s*&\s*Greed\s*Index/i);
+    if (match) sentimentScore = parseInt(match[1]);
+  }
+
+  // Handle long/short ratio
+  const longShortRatio: LongShortData[] = adkResult.longShortRatioBinance || adkResult.longShortRatio || [];
+
+  // Handle tokenomics - convert from various formats
+  let tokenomics: TokenDistribution[] = [];
+  if (adkResult.tokenomics?.supplyDistribution) {
+    tokenomics = adkResult.tokenomics.supplyDistribution.map((item: any) => ({
+      name: item.category || item.name,
+      value: item.percentage || item.value
+    }));
+  } else if (Array.isArray(adkResult.tokenomics)) {
+    tokenomics = adkResult.tokenomics;
+  } else if (adkResult.tokenomics && typeof adkResult.tokenomics === 'object') {
+    // If it's an object with various properties, try to extract meaningful data
+    tokenomics = Object.entries(adkResult.tokenomics)
+      .filter(([key]) => !['maxSupply', 'circulatingSupply', 'totalSupply'].includes(key))
+      .map(([key, value]) => ({
+        name: key,
+        value: typeof value === 'number' ? value : 0
+      }));
+  }
+  
+  // If still empty, generate default Bitcoin-like distribution
+  if (tokenomics.length === 0) {
+    tokenomics = [
+      { name: 'Miners/Early Adopters', value: 60 },
+      { name: 'Retail Investors', value: 30 },
+      { name: 'Institutional', value: 10 }
+    ];
+  }
+
+  // Handle project scores - convert from object to array
+  let projectScores: ProjectMetric[] = [];
+  if (adkResult.projectScores && typeof adkResult.projectScores === 'object') {
+    projectScores = Object.entries(adkResult.projectScores).map(([key, value]) => ({
+      subject: key.charAt(0).toUpperCase() + key.slice(1),
+      A: value as number,
+      fullMark: 100
+    }));
+  } else if (Array.isArray(adkResult.projectScores)) {
+    projectScores = adkResult.projectScores;
+  }
+
+  return {
+    coinName: adkResult.coinName,
+    currentPrice: adkResult.currentPrice,
+    summary: adkResult.summary,
+    priceHistory,
+    tokenomics,
+    sentimentScore,
+    longShortRatio,
+    projectScores
+  };
+}
+
 // --- MAIN ANALYSIS FUNCTION WITH IQ ADK ---
 
 export const analyzeCoin = async (coinName: string): Promise<CryptoData> => {
@@ -186,11 +266,7 @@ export const analyzeCoin = async (coinName: string): Promise<CryptoData> => {
     const builder = AgentBuilder
       .create("crypto_data_aggregator")
       .withModel("gemini-2.5-flash")
-      .withInstruction(systemInstruction)
-      .withRunConfig({
-        temperature: 0.2, // Low temperature to stick to facts
-        timeout: 30000
-      });
+      .withInstruction(systemInstruction);
 
     // @ts-ignore - buildWithSchema exists but type definition might be incomplete
     const { runner } = await builder.buildWithSchema(cryptoZodSchema);
@@ -198,16 +274,21 @@ export const analyzeCoin = async (coinName: string): Promise<CryptoData> => {
     const result = await runner.ask(`Generate the full JSON dashboard data for ${identifiedName}.`);
     
     // ADK returns JSON string wrapped in code blocks, need to parse
+    let parsedResult: any;
     if (typeof result === 'string') {
       const jsonMatch = result.match(/```json\s*([\s\S]*?)\s*```/);
       if (jsonMatch) {
-        return JSON.parse(jsonMatch[1]) as CryptoData;
+        parsedResult = JSON.parse(jsonMatch[1]);
+      } else {
+        // Try parsing directly if no code blocks
+        parsedResult = JSON.parse(result);
       }
-      // Try parsing directly if no code blocks
-      return JSON.parse(result) as CryptoData;
+    } else {
+      parsedResult = result;
     }
     
-    return result as CryptoData;
+    // Transform to match CryptoData interface
+    return transformADKOutput(parsedResult);
   } catch (error) {
     console.error("AI Generation Error (ADK):", error);
     throw error;
