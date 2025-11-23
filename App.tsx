@@ -80,6 +80,7 @@ const FormattedMessage = ({ text }: { text: string }) => {
 
 const App: React.FC = () => {
   const [input, setInput] = useState('');
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   
   // Initialize with one default session
   const initialSessionId = 'init-session';
@@ -150,6 +151,11 @@ const App: React.FC = () => {
     setActiveSessionId(newId);
     setMessages(newSession.messages);
     setIsLoading(false);
+    
+    // On mobile, close sidebar when starting new chat
+    if (window.innerWidth < 768) {
+      setIsSidebarOpen(false);
+    }
   };
 
   const loadSession = (sessionId: string) => {
@@ -158,6 +164,11 @@ const App: React.FC = () => {
       setActiveSessionId(sessionId);
       setMessages(session.messages);
       setIsLoading(false); // Reset loading state when switching
+      
+      // Close sidebar on mobile when a chat is selected
+      if (window.innerWidth < 768) {
+        setIsSidebarOpen(false);
+      }
     }
   };
 
@@ -247,31 +258,66 @@ const App: React.FC = () => {
   };
 
   return (
-    <div className="flex h-screen w-full bg-gemini-bg text-gemini-text overflow-hidden font-sans selection:bg-blue-500/30">
+    <div className="flex h-screen w-full bg-gemini-bg text-gemini-text overflow-hidden font-sans selection:bg-blue-500/30 relative">
       
+      {/* Mobile Overlay */}
+      {isSidebarOpen && (
+        <div 
+          className="fixed inset-0 bg-black/50 z-20 md:hidden transition-opacity"
+          onClick={() => setIsSidebarOpen(false)}
+        />
+      )}
+
       {/* Sidebar */}
-      <div className="hidden md:flex flex-col w-[260px] h-full bg-[#1e1f20] p-4 gap-4 shrink-0 border-r border-white/5">
-        <div className="flex items-center gap-2 px-2 py-3 cursor-pointer hover:bg-white/5 rounded-lg transition-colors group">
-          <Menu className="w-5 h-5 text-gray-400 group-hover:text-white transition-colors" />
-          <span className="font-medium text-gray-300 group-hover:text-white transition-colors">Menu</span>
+      <div 
+        className={`
+          fixed md:static inset-y-0 left-0 z-30
+          flex flex-col h-full bg-[#1e1f20] shrink-0 border-r border-white/5 
+          transition-all duration-300 ease-in-out
+          ${isSidebarOpen 
+            ? 'translate-x-0 w-[280px]' 
+            : '-translate-x-full md:translate-x-0 md:w-[72px]'
+          }
+        `}
+      >
+        {/* Menu Toggle (The 3 lines) - Always visible in Sidebar */}
+        <div 
+          className={`flex items-center ${isSidebarOpen ? 'justify-start px-4 gap-4' : 'justify-center'} h-16 cursor-pointer hover:bg-white/5 transition-colors group whitespace-nowrap`}
+          onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+          title={isSidebarOpen ? "Collapse menu" : "Expand menu"}
+        >
+          <Menu className="w-6 h-6 text-gray-400 group-hover:text-white transition-colors shrink-0" />
+          <span className={`font-medium text-gray-300 group-hover:text-white transition-opacity duration-200 ${isSidebarOpen ? 'opacity-100' : 'opacity-0 hidden'}`}>
+            Menu
+          </span>
         </div>
         
-        <button 
-          className="flex items-center gap-3 bg-[#2d2e2f] hover:bg-[#37393b] text-gray-200 px-4 py-3 rounded-full transition-all w-fit mb-2 shadow-lg hover:shadow-xl border border-white/5"
-          onClick={handleNewChat}
-        >
-           <Plus className="w-4 h-4" />
-           <span className="text-sm font-medium">New Chat</span>
-        </button>
+        {/* New Chat Button - Adapts to width */}
+        <div className={`px-3 mb-6 mt-2 ${!isSidebarOpen && 'flex justify-center'}`}>
+           <button 
+             onClick={handleNewChat}
+             className={`
+                flex items-center gap-3 bg-[#2d2e2f] hover:bg-[#37393b] text-gray-200 rounded-full transition-all shadow-lg hover:shadow-xl border border-white/5 whitespace-nowrap overflow-hidden
+                ${isSidebarOpen ? 'px-4 py-3 w-fit' : 'w-10 h-10 justify-center p-0'}
+             `}
+             title="New Chat"
+           >
+              <Plus className="w-5 h-5 shrink-0" />
+              <span className={`text-sm font-medium transition-opacity duration-200 ${isSidebarOpen ? 'opacity-100' : 'opacity-0 hidden'}`}>
+                 New Chat
+              </span>
+           </button>
+        </div>
 
-        <div className="flex-1 overflow-y-auto space-y-1 custom-scrollbar pr-2">
-          <div className="px-3 text-xs font-medium text-gray-500 mb-2 uppercase tracking-wider">Recent</div>
+        {/* Recent List - Hidden when collapsed */}
+        <div className={`flex-1 overflow-y-auto space-y-1 custom-scrollbar pr-2 transition-opacity duration-200 ${isSidebarOpen ? 'opacity-100' : 'opacity-0 hidden pointer-events-none'}`}>
+          <div className="px-4 text-xs font-medium text-gray-500 mb-2 uppercase tracking-wider whitespace-nowrap">Recent</div>
           
           {sessions.map((session) => (
             <div 
               key={session.id}
               onClick={() => loadSession(session.id)}
-              className={`group flex items-center justify-between px-3 py-2 text-sm rounded-lg cursor-pointer transition-all ${
+              className={`group flex items-center justify-between px-3 py-2 mx-2 text-sm rounded-lg cursor-pointer transition-all ${
                 activeSessionId === session.id 
                   ? 'bg-blue-500/20 text-blue-100' 
                   : 'text-gray-300 hover:bg-white/5 hover:text-white'
@@ -295,8 +341,9 @@ const App: React.FC = () => {
           ))}
         </div>
 
-        <div className="mt-auto px-2 py-2">
-          <div className="flex items-center gap-2 text-xs text-gray-500">
+        {/* Bottom Status - Hidden when collapsed */}
+        <div className={`mt-auto px-4 py-4 transition-opacity duration-200 ${isSidebarOpen ? 'opacity-100' : 'opacity-0 hidden'}`}>
+          <div className="flex items-center gap-2 text-xs text-gray-500 whitespace-nowrap">
             <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
             System Operational
           </div>
@@ -304,13 +351,23 @@ const App: React.FC = () => {
       </div>
 
       {/* Main Content Area */}
-      <div className="flex-1 flex flex-col relative h-full max-w-5xl mx-auto w-full">
+      <div className="flex-1 flex flex-col relative h-full max-w-5xl mx-auto w-full min-w-0">
         
         {/* Top Bar */}
         <div className="flex items-center justify-between p-4 md:p-6 sticky top-0 z-10 bg-gemini-bg/80 backdrop-blur-md">
-          <div className="flex items-center gap-2">
-             <span className="text-xl font-semibold text-gray-200">Gemini Crypto</span>
-             <span className="px-2 py-0.5 bg-blue-900/30 text-blue-400 text-xs rounded-md border border-blue-800/50">2.5 Flash</span>
+          <div className="flex items-center gap-3">
+             {/* Mobile Toggle Button - ONLY visible on mobile now */}
+             <button 
+                onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+                className="p-2 hover:bg-white/10 rounded-full text-gray-400 transition-colors md:hidden"
+                title="Open Menu"
+             >
+               <Menu className="w-5 h-5" />
+             </button>
+             <div className="flex items-center gap-2">
+                <span className="text-xl font-semibold text-gray-200">Gemini Crypto</span>
+                <span className="px-2 py-0.5 bg-blue-900/30 text-blue-400 text-xs rounded-md border border-blue-800/50 hidden sm:inline-block">2.5 Flash</span>
+             </div>
           </div>
           <div className="w-8 h-8 rounded-full bg-pink-500/20 flex items-center justify-center text-pink-400">
             <User className="w-5 h-5" />
