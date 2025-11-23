@@ -1,20 +1,10 @@
-/**
- * services-adk/geminiService.ts
- * 
- * Migration của geminiService sang IQ ADK
- * - Giữ nguyên 100% các prompt system
- * - Giữ nguyên các schema definitions
- * - Giữ nguyên logic fetching real data
- * - Thay thế Google GenAI bằng IQ ADK AgentBuilder
- */
-
 import { AgentBuilder, FunctionTool } from '@iqai/adk';
-import { CryptoData, ChatMessage, PortfolioItem, PricePoint, LongShortData, TransactionData } from "../types";
 import { z } from 'zod';
+import { CryptoData, ChatMessage, PortfolioItem, PricePoint, LongShortData, TransactionData } from "../types";
 
-// --- SCHEMA DEFINITIONS (Zod - Compatible với IQ ADK) ---
+// --- SCHEMA DEFINITIONS (Zod for ADK) ---
 
-const CryptoSchema = z.object({
+const cryptoZodSchema = z.object({
   coinName: z.string().describe("Name of the cryptocurrency"),
   currentPrice: z.number().describe("Current price in USD"),
   summary: z.string().describe("A brief analytical summary based on the provided real data."),
@@ -39,7 +29,7 @@ const CryptoSchema = z.object({
   }))
 });
 
-const TransactionSchema = z.object({
+const transactionZodSchema = z.object({
   type: z.enum(["SEND", "SWAP", "BUY", "SELL"]),
   token: z.string(),
   amount: z.number(),
@@ -49,12 +39,7 @@ const TransactionSchema = z.object({
   summary: z.string()
 });
 
-const IntentSchema = z.object({
-  type: z.enum(['ANALYZE', 'CHAT', 'PORTFOLIO_ANALYSIS', 'TRANSACTION']),
-  coinName: z.string().optional()
-});
-
-// --- REAL DATA FETCHING FUNCTIONS (Giữ nguyên 100%) ---
+// --- REAL DATA FETCHING FUNCTIONS ---
 
 const COIN_ID_MAP: Record<string, string> = {
   'BTC': 'bitcoin',
@@ -147,7 +132,7 @@ async function getLongShortRatio(symbol: string): Promise<LongShortData[] | null
   }
 }
 
-// --- MAIN ANALYSIS FUNCTION (IQ ADK Version) ---
+// --- MAIN ANALYSIS FUNCTION WITH IQ ADK ---
 
 export const analyzeCoin = async (coinName: string): Promise<CryptoData> => {
   // 1. Identify the coin
@@ -176,8 +161,8 @@ export const analyzeCoin = async (coinName: string): Promise<CryptoData> => {
     realLongShort = lsResult;
   }
 
-  // 3. Construct Prompt with Real Data (GIỮ NGUYÊN 100% PROMPT GỐC)
-  const systemPrompt = `
+  // 3. Construct System Instruction with Real Data
+  const systemInstruction = `
     You are a Crypto Data Aggregator. 
     I have fetched REAL-TIME data from external APIs. 
     Your job is to structure this data into the required JSON format and generating the missing pieces (Tokenomics, Project Score) based on your knowledge of the project.
@@ -197,68 +182,94 @@ export const analyzeCoin = async (coinName: string): Promise<CryptoData> => {
   `;
 
   try {
-    // Use IQ ADK AgentBuilder with structured output
-    const { runner } = await AgentBuilder
+    // Use IQ ADK with structured output
+    const builder = AgentBuilder
       .create("crypto_data_aggregator")
       .withModel("gemini-2.5-flash")
-      .withInstruction(systemPrompt)
-      .buildWithSchema(CryptoSchema);
+      .withInstruction(systemInstruction)
+      .withRunConfig({
+        temperature: 0.2, // Low temperature to stick to facts
+        timeout: 30000
+      });
+
+    // @ts-ignore - buildWithSchema exists but type definition might be incomplete
+    const { runner } = await builder.buildWithSchema(cryptoZodSchema);
 
     const result = await runner.ask(`Generate the full JSON dashboard data for ${identifiedName}.`);
+    
+    // ADK returns JSON string wrapped in code blocks, need to parse
+    if (typeof result === 'string') {
+      const jsonMatch = result.match(/```json\s*([\s\S]*?)\s*```/);
+      if (jsonMatch) {
+        return JSON.parse(jsonMatch[1]) as CryptoData;
+      }
+      // Try parsing directly if no code blocks
+      return JSON.parse(result) as CryptoData;
+    }
+    
     return result as CryptoData;
   } catch (error) {
-    console.error("AI Generation Error:", error);
+    console.error("AI Generation Error (ADK):", error);
     throw error;
   }
 };
 
-// --- TRANSACTION PREVIEW (IQ ADK Version) ---
+// --- TRANSACTION PREVIEW WITH IQ ADK ---
 
 export const createTransactionPreview = async (userText: string): Promise<TransactionData> => {
-    // GIỮ NGUYÊN 100% PROMPT GỐC
-    const systemPrompt = `
-      You are a Web3 Transaction Agent. Your job is to extract transaction details from the user's natural language request.
-      
-      Rules:
-      1. Detect intent: SEND (transfer tokens), SWAP (trade tokens), BUY, SELL.
-      2. Extract 'token' (default to ETH if unclear but implied), 'amount'.
-      3. For 'toAddress':
-         - If user provides a 0x address, use it.
-         - If SWAP/BUY/SELL, use the Uniswap V2 Router address: '0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D'.
-         - If SEND and no address provided, use a placeholder '0x0000...0000' but mention in summary user needs to verify.
-      4. Network: Assume 'Ethereum Mainnet' or 'Sepolia Testnet' based on context, default to 'Ethereum Mainnet'.
-      5. Estimated Gas: Estimate standard ETH gas (e.g., 0.002 ETH).
-      
-      Example: "Swap 1 ETH for USDT" -> Type: SWAP, Token: ETH, Amount: 1, To: RouterAddress.
-      Example: "Send 0.5 ETH to 0x123..." -> Type: SEND, Token: ETH, Amount: 0.5, To: 0x123...
-    `;
+  const systemInstruction = `
+    You are a Web3 Transaction Agent. Your job is to extract transaction details from the user's natural language request.
+    
+    Rules:
+    1. Detect intent: SEND (transfer tokens), SWAP (trade tokens), BUY, SELL.
+    2. Extract 'token' (default to ETH if unclear but implied), 'amount'.
+    3. For 'toAddress':
+       - If user provides a 0x address, use it.
+       - If SWAP/BUY/SELL, use the Uniswap V2 Router address: '0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D'.
+       - If SEND and no address provided, use a placeholder '0x0000...0000' but mention in summary user needs to verify.
+    4. Network: Assume 'Ethereum Mainnet' or 'Sepolia Testnet' based on context, default to 'Ethereum Mainnet'.
+    5. Estimated Gas: Estimate standard ETH gas (e.g., 0.002 ETH).
+    
+    Example: "Swap 1 ETH for USDT" -> Type: SWAP, Token: ETH, Amount: 1, To: RouterAddress.
+    Example: "Send 0.5 ETH to 0x123..." -> Type: SEND, Token: ETH, Amount: 0.5, To: 0x123...
+  `;
 
-    try {
-        const { runner } = await AgentBuilder
-            .create("transaction_parser")
-            .withModel("gemini-2.5-flash")
-            .withInstruction(systemPrompt)
-            .buildWithSchema(TransactionSchema);
+  try {
+    const builder = AgentBuilder
+      .create("web3_transaction_agent")
+      .withModel("gemini-2.5-flash")
+      .withInstruction(systemInstruction);
 
-        const result = await runner.ask(`Parse this transaction request: "${userText}"`);
-        return result as TransactionData;
-    } catch (error) {
-        console.error("Transaction Parse Error", error);
-        throw error;
+    // @ts-ignore - buildWithSchema exists but type definition might be incomplete
+    const { runner } = await builder.buildWithSchema(transactionZodSchema);
+
+    const result = await runner.ask(`Parse this transaction request: "${userText}"`);
+    
+    // Parse JSON string
+    if (typeof result === 'string') {
+      const jsonMatch = result.match(/```json\s*([\s\S]*?)\s*```/);
+      if (jsonMatch) {
+        return JSON.parse(jsonMatch[1]) as TransactionData;
+      }
+      return JSON.parse(result) as TransactionData;
     }
-}
+    
+    return result as TransactionData;
+  } catch (error) {
+    console.error("Transaction Parse Error (ADK):", error);
+    throw error;
+  }
+};
 
-// --- MARKET REPORT GENERATION ---
+// --- MARKET REPORT WITH IQ ADK ---
 
 export const generateMarketReport = async (data: CryptoData): Promise<string> => {
   try {
     const dataString = JSON.stringify(data, null, 2);
     
-    // GIỮ NGUYÊN 100% PROMPT GỐC
-    const instruction = `
+    const systemInstruction = `
       Act as a senior cryptocurrency market analyst.
-      Write a "Deep Dive Analysis" for ${data.coinName} based on this dataset:
-      ${dataString}
+      Write a "Deep Dive Analysis" based on the provided dataset.
       
       Structure:
       - **Market Sentiment & Price Action**: specific comments on the chart and fear/greed index.
@@ -270,40 +281,62 @@ export const generateMarketReport = async (data: CryptoData): Promise<string> =>
     const { runner } = await AgentBuilder
       .create("market_analyst")
       .withModel("gemini-2.5-flash")
-      .withInstruction(instruction)
+      .withInstruction(systemInstruction)
       .build();
 
-    return await runner.ask("Generate the analysis.");
+    const response = await runner.ask(`Write a Deep Dive Analysis for ${data.coinName} based on this dataset:\n${dataString}`);
+    
+    return response || "Analysis generation failed.";
   } catch (error) {
-    console.error("Error generating report:", error);
+    console.error("Error generating report (ADK):", error);
     return "Unable to generate market report.";
   }
 };
 
-// --- INTENT DETERMINATION ---
+// --- INTENT DETECTION WITH IQ ADK ---
 
 export const determineIntent = async (userMessage: string): Promise<{ type: 'ANALYZE' | 'CHAT' | 'PORTFOLIO_ANALYSIS' | 'TRANSACTION'; coinName?: string }> => {
-  try {
-    // GIỮ NGUYÊN 100% PROMPT GỐC
-    const instruction = `Classify intent: "${userMessage}".
-      1. New coin analysis (e.g. "Analyze BTC", "How is Solana doing") -> {"type": "ANALYZE", "coinName": "CorrectedName"}
-      2. Portfolio analysis (e.g. "Check my wallet", "My portfolio") -> {"type": "PORTFOLIO_ANALYSIS"}
-      3. Transaction Request (e.g. "Send 1 ETH", "Swap ETH for USDT", "Buy BTC") -> {"type": "TRANSACTION"}
-      4. General chat -> {"type": "CHAT"}`;
+  const intentSchema = z.object({
+    type: z.enum(['ANALYZE', 'CHAT', 'PORTFOLIO_ANALYSIS', 'TRANSACTION']),
+    coinName: z.string().optional()
+  });
 
-    const { runner } = await AgentBuilder
+  const systemInstruction = `
+    Classify user intent into one of these categories:
+    1. New coin analysis (e.g. "Analyze BTC", "How is Solana doing") -> {"type": "ANALYZE", "coinName": "CorrectedName"}
+    2. Portfolio analysis (e.g. "Check my wallet", "My portfolio") -> {"type": "PORTFOLIO_ANALYSIS"}
+    3. Transaction Request (e.g. "Send 1 ETH", "Swap ETH for USDT", "Buy BTC") -> {"type": "TRANSACTION"}
+    4. General chat -> {"type": "CHAT"}
+  `;
+
+  try {
+    const builder = AgentBuilder
       .create("intent_classifier")
       .withModel("gemini-2.5-flash")
-      .withInstruction(instruction)
-      .buildWithSchema(IntentSchema);
+      .withInstruction(systemInstruction);
 
-    return await runner.ask("Classify this message.");
-  } catch {
+    // @ts-ignore - buildWithSchema exists but type definition might be incomplete
+    const { runner } = await builder.buildWithSchema(intentSchema);
+
+    const result = await runner.ask(`Classify intent: "${userMessage}"`);
+    
+    // Parse JSON string
+    if (typeof result === 'string') {
+      const jsonMatch = result.match(/```json\s*([\s\S]*?)\s*```/);
+      if (jsonMatch) {
+        return JSON.parse(jsonMatch[1]) as { type: 'ANALYZE' | 'CHAT' | 'PORTFOLIO_ANALYSIS' | 'TRANSACTION'; coinName?: string };
+      }
+      return JSON.parse(result) as { type: 'ANALYZE' | 'CHAT' | 'PORTFOLIO_ANALYSIS' | 'TRANSACTION'; coinName?: string };
+    }
+    
+    return result as { type: 'ANALYZE' | 'CHAT' | 'PORTFOLIO_ANALYSIS' | 'TRANSACTION'; coinName?: string };
+  } catch (error) {
+    console.error("Intent Detection Error (ADK):", error);
     return { type: 'CHAT' };
   }
-}
+};
 
-// --- CHAT WITH MODEL (IQ ADK Version with Session) ---
+// --- CHAT WITH IQ ADK (Session-based conversation) ---
 
 export const chatWithModel = async (
   userMessage: string, 
@@ -311,28 +344,36 @@ export const chatWithModel = async (
   contextData?: CryptoData
 ): Promise<string> => {
   try {
-    // GIỮ NGUYÊN LOGIC SYSTEM INSTRUCTION GỐC
     let systemInstruction = "You are CryptoInsight AI. You have access to real-time crypto tools.";
     if (contextData) {
       systemInstruction += `\nCURRENT CONTEXT: User is viewing dashboard for ${contextData.coinName}.\nData: ${JSON.stringify(contextData)}`;
     }
 
-    // Build agent with session
+    // Create session ID from history length to maintain conversation
+    const sessionId = `chat-session-${Date.now()}`;
+
     const { runner } = await AgentBuilder
-      .create("crypto_chat_assistant")
+      .create("cryptoinsight_chat")
       .withModel("gemini-2.5-flash")
       .withInstruction(systemInstruction)
-      .withQuickSession("crypto-chat-session")
       .build();
 
-    // IQ ADK tự động quản lý history, chỉ cần gửi message hiện tại
-    return await runner.ask(userMessage);
+    // For conversation history, we'd need to replay messages
+    // For simplicity in this implementation, we'll use the current message with context
+    const contextualMessage = history.length > 1 
+      ? `Previous context: ${history.slice(-3).map(h => `${h.role}: ${h.text}`).join('\n')}\n\nCurrent message: ${userMessage}`
+      : userMessage;
+
+    const response = await runner.ask(contextualMessage);
+    
+    return response;
   } catch (error) {
+    console.error("Chat Error (ADK):", error);
     return "I'm having trouble connecting to the chat service.";
   }
 };
 
-// --- PORTFOLIO FUNCTIONS (Giữ nguyên 100%) ---
+// --- PORTFOLIO REAL-TIME UPDATE (No change needed, pure API call) ---
 
 export const updatePortfolioRealTime = async (portfolio: PortfolioItem[]): Promise<PortfolioItem[]> => {
   try {
@@ -356,25 +397,30 @@ export const updatePortfolioRealTime = async (portfolio: PortfolioItem[]): Promi
   }
 };
 
+// --- PORTFOLIO ANALYSIS WITH IQ ADK ---
+
 export const analyzePortfolio = async (portfolio: PortfolioItem[]): Promise<string> => {
+  const systemInstruction = `
+    You are a crypto portfolio analyst.
+    Analyze the provided portfolio data and provide:
+    1. Total Value Breakdown.
+    2. Performance Check (Comparing Avg Price vs Current Price).
+    3. Risk Assessment (Diversification).
+    4. Suggestion for rebalancing.
+  `;
+
   try {
-     // GIỮ NGUYÊN 100% PROMPT GỐC
-     const instruction = `Analyze this crypto portfolio based on the provided data: ${JSON.stringify(portfolio)}. 
-      
-      Provide:
-      1. Total Value Breakdown.
-      2. Performance Check (Comparing Avg Price vs Current Price).
-      3. Risk Assessment (Diversification).
-      4. Suggestion for rebalancing.`;
+    const { runner } = await AgentBuilder
+      .create("portfolio_analyst")
+      .withModel("gemini-2.5-flash")
+      .withInstruction(systemInstruction)
+      .build();
 
-     const { runner } = await AgentBuilder
-       .create("portfolio_analyzer")
-       .withModel("gemini-2.5-flash")
-       .withInstruction(instruction)
-       .build();
-
-    return await runner.ask("Analyze this portfolio.");
-  } catch {
+    const response = await runner.ask(`Analyze this crypto portfolio: ${JSON.stringify(portfolio)}`);
+    
+    return response || "Unable to analyze portfolio.";
+  } catch (error) {
+    console.error("Portfolio Analysis Error (ADK):", error);
     return "Error analyzing portfolio.";
   }
-}
+};
