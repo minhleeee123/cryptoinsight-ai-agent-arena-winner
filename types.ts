@@ -48,3 +48,11 @@ export interface ChatSession {
     date: number; // Timestamp
     messages: ChatMessage[];
 }
+
+export interface PortfolioItem {
+    symbol: string;
+    name: string;
+    amount: number;
+    avgPrice: number;
+    currentPrice: number;
+}

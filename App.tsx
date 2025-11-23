@@ -1,18 +1,10 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Send, Bot, User, Mic, Sparkles, Menu, Plus, Activity, MessageSquare, Trash2, Wallet, TrendingUp, TrendingDown, ArrowLeft, Shield, Mail } from 'lucide-react';
-import { ChatMessage, CryptoData, ChatSession } from './types';
-import { analyzeCoin, generateMarketReport, determineIntent, chatWithModel } from './services/geminiService';
+import { Send, Bot, User, Mic, Sparkles, Menu, Plus, Activity, MessageSquare, Trash2, Wallet, TrendingUp, TrendingDown, ArrowLeft, Shield, Mail, PieChart } from 'lucide-react';
+import { ChatMessage, CryptoData, ChatSession, PortfolioItem } from './types';
+import { analyzeCoin, generateMarketReport, determineIntent, chatWithModel, analyzePortfolio } from './services/geminiService';
 import CryptoDashboard from './components/CryptoDashboard';
 
 // --- Types & Mock Data for Profile ---
-
-interface PortfolioItem {
-  symbol: string;
-  name: string;
-  amount: number;
-  avgPrice: number;
-  currentPrice: number;
-}
 
 const MOCK_USER = {
   name: "Crypto Explorer",
@@ -219,7 +211,7 @@ const App: React.FC = () => {
         { 
           id: 'welcome', 
           role: 'model', 
-          text: 'Hello! I am CryptoInsight AI. Ask me about any coin (e.g., "Analyze Solana") and I will generate comprehensive charts and data for you.' 
+          text: 'Hello! I am CryptoInsight AI. Ask me about any coin (e.g., "Analyze Solana") or ask me to "Analyze my portfolio" to see how your holdings are doing.' 
         }
       ]
     }
@@ -230,7 +222,7 @@ const App: React.FC = () => {
   const [messages, setMessages] = useState<ChatMessage[]>(sessions[0].messages);
   
   const [isLoading, setIsLoading] = useState(false);
-  const [loadingStatus, setLoadingStatus] = useState<string>(''); // 'fetching-data' | 'analyzing' | 'thinking' | ''
+  const [loadingStatus, setLoadingStatus] = useState<string>(''); // 'fetching-data' | 'analyzing' | 'thinking' | 'analyzing-portfolio' | ''
   const scrollRef = useRef<HTMLDivElement>(null);
 
   // Sync messages to the active session whenever they change
@@ -374,8 +366,22 @@ const App: React.FC = () => {
         };
         setMessages(prev => [...prev, textMsg]);
 
+      } else if (intent.type === 'PORTFOLIO_ANALYSIS') {
+        // --- FLOW 2: Portfolio Analysis ---
+        setLoadingStatus('analyzing-portfolio');
+
+        // Pass the mock portfolio data to the service
+        const reportText = await analyzePortfolio(MOCK_USER.portfolio);
+
+        const textMsg: ChatMessage = {
+          id: (Date.now() + 1).toString(),
+          role: 'model',
+          text: reportText
+        };
+        setMessages(prev => [...prev, textMsg]);
+
       } else {
-        // --- FLOW 2: Contextual Chat ---
+        // --- FLOW 3: Contextual Chat ---
         setLoadingStatus('thinking');
         
         // Find context from previous messages
@@ -631,6 +637,23 @@ const App: React.FC = () => {
                             </div>
                         </div>
                      )}
+                     {loadingStatus === 'analyzing-portfolio' && (
+                        <div className="flex flex-col gap-3 animate-in fade-in slide-in-from-bottom-2 duration-500">
+                            <div className="flex items-center gap-3 px-4 py-3 bg-purple-500/10 border border-purple-500/20 rounded-xl max-w-fit">
+                                 <div className="relative flex h-3 w-3 shrink-0">
+                                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-purple-400 opacity-75"></span>
+                                    <span className="relative inline-flex rounded-full h-3 w-3 bg-purple-500"></span>
+                                  </div>
+                                  <div className="flex flex-col">
+                                    <span className="text-purple-200 text-sm font-medium flex items-center gap-2">
+                                        Portfolio Analyst Agent
+                                        <PieChart className="w-3 h-3 text-purple-400" />
+                                    </span>
+                                    <span className="text-purple-300/70 text-xs">Evaluating holdings, diversification, and PNL...</span>
+                                  </div>
+                            </div>
+                        </div>
+                     )}
                      {loadingStatus === 'thinking' && (
                         <div className="px-5 py-3.5 rounded-2xl bg-[#1e1f20] text-gray-400 text-sm animate-pulse">
                             Thinking...
@@ -652,7 +675,7 @@ const App: React.FC = () => {
                    value={input}
                    onChange={(e) => setInput(e.target.value)}
                    onKeyDown={handleKeyDown}
-                   placeholder="Ask about a coin (e.g., Bitcoin, ETH)..."
+                   placeholder="Ask about a coin (e.g., Bitcoin) or 'Analyze my portfolio'..."
                    className="flex-1 bg-transparent border-none outline-none text-white placeholder-gray-500 h-10"
                    disabled={isLoading}
                  />

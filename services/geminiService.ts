@@ -1,5 +1,5 @@
 import { GoogleGenAI, Type, Schema } from "@google/genai";
-import { CryptoData, ChatMessage } from "../types";
+import { CryptoData, ChatMessage, PortfolioItem } from "../types";
 
 const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
@@ -177,7 +177,7 @@ export const generateMarketReport = async (data: CryptoData): Promise<string> =>
 
 // --- NEW FUNCTIONS FOR CONTEXT AWARENESS ---
 
-export const determineIntent = async (userMessage: string): Promise<{ type: 'ANALYZE' | 'CHAT'; coinName?: string }> => {
+export const determineIntent = async (userMessage: string): Promise<{ type: 'ANALYZE' | 'CHAT' | 'PORTFOLIO_ANALYSIS'; coinName?: string }> => {
   try {
     const response = await ai.models.generateContent({
       model: "gemini-2.5-flash",
@@ -185,7 +185,8 @@ export const determineIntent = async (userMessage: string): Promise<{ type: 'ANA
         Classify the user's intent based on this message: "${userMessage}".
         
         1. If the user is asking to analyze a specific NEW cryptocurrency (e.g., "Analyze BTC", "Price of Solana", "ETH", "Show me Dogecoin", "how is btc doing"), return JSON: {"type": "ANALYZE", "coinName": "CorrectedCoinName"}.
-        2. If the user is asking a follow-up question, general chat, or referring to previous context (e.g., "What is the sentiment?", "Tell me more", "Why is it down?", "Is it a good buy?"), return JSON: {"type": "CHAT"}.
+        2. If the user is asking to analyze their own portfolio/holdings (e.g., "Analyze my portfolio", "How is my portfolio doing?", "Check my wallet performance", "Review my holdings"), return JSON: {"type": "PORTFOLIO_ANALYSIS"}.
+        3. If the user is asking a follow-up question, general chat, or referring to previous context (e.g., "What is the sentiment?", "Tell me more", "Why is it down?", "Is it a good buy?"), return JSON: {"type": "CHAT"}.
         
         Output valid JSON only.
       `,
@@ -201,7 +202,11 @@ export const determineIntent = async (userMessage: string): Promise<{ type: 'ANA
     return { type: 'CHAT' };
   } catch (e) {
     console.error("Intent detection failed", e);
-    // Fallback: If short message and looks like a ticker, assume Analyze
+    // Fallback simple checks
+    const lowerMsg = userMessage.toLowerCase();
+    if (lowerMsg.includes('portfolio') || lowerMsg.includes('holdings') || lowerMsg.includes('my wallet')) {
+       return { type: 'PORTFOLIO_ANALYSIS' };
+    }
     if (userMessage.length < 10 && /^[a-zA-Z0-9 ]+$/.test(userMessage)) {
        return { type: 'ANALYZE', coinName: userMessage };
     }
@@ -256,3 +261,30 @@ export const chatWithModel = async (
     return "I'm having trouble connecting to the chat service right now.";
   }
 };
+
+export const analyzePortfolio = async (portfolio: PortfolioItem[]): Promise<string> => {
+  try {
+     const response = await ai.models.generateContent({
+      model: "gemini-2.5-flash",
+      contents: `
+        Act as a professional Wealth Manager and Portfolio Analyst.
+        
+        Here is the user's current cryptocurrency portfolio:
+        ${JSON.stringify(portfolio, null, 2)}
+        
+        Please provide a comprehensive analysis of this portfolio using Markdown formatting. 
+        Include:
+        1. **Portfolio Composition**: A breakdown of the assets.
+        2. **Risk Assessment**: Is it too concentrated? Too risky? (e.g. Memecoins vs Blue chips).
+        3. **Performance Check**: Analyze the PNL (Profit and Loss) based on avgPrice vs currentPrice.
+        4. **Actionable Advice**: Suggest rebalancing, diversification, or holding strategies.
+        
+        Keep the tone professional, encouraging, but realistic about crypto risks.
+      `,
+    });
+    return response.text || "Unable to analyze portfolio at this moment.";
+  } catch (error) {
+    console.error("Portfolio analysis error:", error);
+    return "I encountered an error while analyzing your portfolio data.";
+  }
+}
