@@ -18,8 +18,14 @@ export const connectToMetaMask = async (): Promise<WalletInfo | null> => {
   }
 
   try {
-    // Request account access
     const provider = new ethers.BrowserProvider(window.ethereum);
+    
+    // ADDED: Force permission request to reset the connection context.
+    // This makes MetaMask show the "Select an account" popup again, 
+    // solving the issue of instant reconnection after disconnect.
+    await provider.send("wallet_requestPermissions", [{ eth_accounts: {} }]);
+
+    // Request account access (now effectively a fresh request due to the line above)
     const accounts = await provider.send("eth_requestAccounts", []);
     
     if (accounts.length === 0) return null;
