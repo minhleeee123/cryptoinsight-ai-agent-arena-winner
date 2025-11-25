@@ -87,55 +87,59 @@ const PriceChart: React.FC<PriceChartProps> = ({ symbol }) => {
   const captureAndAnalyze = async () => {
     try {
         setIsAnalyzing(true);
-        setChatMessages(prev => [...prev, { id: Date.now().toString(), role: 'user', text: "Analyze the chart lines I just drew." }]);
-
-        // 1. Capture Screen using standard API
-        // We prioritize "browser" displaySurface to encourage tab sharing which is cleaner
+        
+        // 1. Request Screen Share
+        // "browser" hint prefers the current tab in some browsers
         const stream = await navigator.mediaDevices.getDisplayMedia({
-            video: { displaySurface: "browser" } as any, 
+            video: { 
+                displaySurface: "browser",
+            } as any, 
             audio: false
         });
 
-        // 2. Create a hidden video element to play the stream
+        // 2. Create hidden video to play stream
         const video = document.createElement('video');
         video.srcObject = stream;
         video.autoplay = true;
-        video.muted = true; // Required for autoplay in some browsers
+        video.muted = true;
+        video.playsInline = true;
 
-        // Wait for the video to be ready and playing
+        // Wait for video to load and play
         await new Promise<void>((resolve) => {
             video.onloadedmetadata = () => {
-                video.play().then(() => {
-                    // Add a small delay to ensure the frame is rendered completely
-                    setTimeout(() => resolve(), 500);
-                });
+                video.play();
+                // Vital: Wait a moment for the frame to actually render data
+                setTimeout(resolve, 500); 
             };
         });
 
-        // 3. Draw the video frame to a canvas
+        // 3. Draw to canvas
         const canvas = document.createElement('canvas');
         canvas.width = video.videoWidth;
         canvas.height = video.videoHeight;
         const ctx = canvas.getContext('2d');
         
-        if (ctx) {
-            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-            const base64Image = canvas.toDataURL('image/png');
+        if (!ctx) throw new Error("Canvas context failed");
+        
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        const base64Image = canvas.toDataURL('image/png');
 
-            // 4. Stop the stream (stop sharing) immediately after capture
-            stream.getTracks().forEach(track => track.stop());
+        // 4. Clean up: Stop all tracks immediately to "Close" the sharing indicator
+        stream.getTracks().forEach(track => track.stop());
 
-            // 5. Send to Gemini
-            const analysis = await analyzeChartImage(base64Image, "Analyze the technical indicators, support/resistance levels, and chart patterns visible in this image. Provide a trading setup recommendation.");
-            
-            setChatMessages(prev => [...prev, { id: Date.now().toString(), role: 'model', text: analysis, isAnalysis: true }]);
-        } else {
-             throw new Error("Could not create canvas context");
-        }
+        // 5. Send to Gemini
+        setChatMessages(prev => [...prev, { id: Date.now().toString(), role: 'user', text: "Analyze the chart lines I just drew." }]);
+        
+        const analysis = await analyzeChartImage(base64Image, "Analyze the technical indicators, support/resistance levels, and chart patterns visible in this image. Provide a trading setup recommendation.");
+        
+        setChatMessages(prev => [...prev, { id: Date.now().toString(), role: 'model', text: analysis, isAnalysis: true }]);
 
-    } catch (error) {
+    } catch (error: any) {
         console.error("Capture failed:", error);
-        setChatMessages(prev => [...prev, { id: Date.now().toString(), role: 'model', text: "I couldn't capture the screen. Please ensure you select the current tab/window when prompted and grant permission." }]);
+        // If user cancelled, don't spam chat
+        if (error.name !== 'NotAllowedError') {
+             setChatMessages(prev => [...prev, { id: Date.now().toString(), role: 'model', text: "I couldn't capture the screen. Please make sure to select the 'Current Tab' or 'Entire Screen' when prompted." }]);
+        }
     } finally {
         setIsAnalyzing(false);
     }
@@ -148,7 +152,6 @@ const PriceChart: React.FC<PriceChartProps> = ({ symbol }) => {
      setChatMessages(prev => [...prev, { id: Date.now().toString(), role: 'user', text: userText }]);
      
      // Simple chat fallback if not analyzing image
-     // ideally this would hook into main chat or be purely frontend for now
      setTimeout(() => {
          setChatMessages(prev => [...prev, { id: Date.now().toString(), role: 'model', text: "That's an interesting observation. If you want me to look at specific levels, draw them and click 'Analyze Chart View' button." }]);
      }, 1000);
@@ -220,7 +223,7 @@ const PriceChart: React.FC<PriceChartProps> = ({ symbol }) => {
                                         </>
                                     ) : (
                                         <>
-                                            <Camera className="w-5 h-5" /> Analyze Chart View
+                                            <Camera className="w-5 h-5" /> Analyze Screen
                                         </>
                                     )}
                                 </button>
@@ -249,7 +252,7 @@ const PriceChart: React.FC<PriceChartProps> = ({ symbol }) => {
                                     <div className="flex justify-start">
                                         <div className="bg-[#2d2e2f] px-4 py-3 rounded-2xl rounded-bl-none flex items-center gap-2 border border-white/5">
                                             <Loader2 className="w-4 h-4 text-blue-400 animate-spin" />
-                                            <span className="text-xs text-gray-400">Looking at your chart...</span>
+                                            <span className="text-xs text-gray-400">Capturing & Analyzing...</span>
                                         </div>
                                     </div>
                                 )}
