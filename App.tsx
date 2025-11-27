@@ -1,6 +1,6 @@
 
 import React, { useState, useRef, useEffect } from 'react';
-import { Send, Bot, User, Mic, Sparkles, Menu, Plus, Activity, MessageSquare, Trash2, Wallet, TrendingUp, TrendingDown, ArrowLeft, Shield, Mail, PieChart, RefreshCw, Link2, X, Compass, Lightbulb, ArrowRightLeft, Search } from 'lucide-react';
+import { Send, Bot, User, Mic, Sparkles, Menu, Plus, Activity, MessageSquare, Trash2, Wallet, TrendingUp, TrendingDown, ArrowLeft, Shield, Mail, PieChart, RefreshCw, Link2, X, Compass, Lightbulb, ArrowRightLeft, Search, ArrowUpRight } from 'lucide-react';
 import { ChatMessage, CryptoData, ChatSession, PortfolioItem, TransactionData } from './types';
 import { analyzeCoin, generateMarketReport, determineIntent, chatWithModel, analyzePortfolio, updatePortfolioRealTime, createTransactionPreview } from './services/geminiService';
 import { connectToMetaMask, formatAddress } from './services/web3Service';
@@ -794,28 +794,6 @@ const App: React.FC = () => {
                 </div>
               ))}
 
-              {/* SUGGESTED PROMPTS - Only show if chat is empty (just 1 welcome message) */}
-              {messages.length === 1 && (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-2xl mx-auto mt-8 animate-in fade-in duration-700 slide-in-from-bottom-4">
-                      {SUGGESTED_PROMPTS.map((item, index) => {
-                          const Icon = item.icon;
-                          return (
-                              <button 
-                                key={index}
-                                onClick={() => setInput(item.prompt)}
-                                className="text-left p-4 rounded-xl bg-[#1e1f20] border border-white/5 hover:bg-[#2d2e2f] hover:border-white/10 transition-all group shadow-sm hover:shadow-md"
-                              >
-                                  <div className={`mb-3 p-2 rounded-lg bg-white/5 w-fit group-hover:scale-110 transition-transform ${item.color}`}>
-                                      <Icon className="w-5 h-5" />
-                                  </div>
-                                  <h3 className="text-gray-200 font-medium text-sm mb-1">{item.title}</h3>
-                                  <p className="text-gray-500 text-xs">{item.subtitle}</p>
-                              </button>
-                          )
-                      })}
-                  </div>
-              )}
-
               {isLoading && (
                 <div className="flex gap-4 animate-fade-in">
                    <div className="w-8 h-8 md:w-10 md:h-10 flex items-center justify-center shrink-0 mt-1">
@@ -904,34 +882,57 @@ const App: React.FC = () => {
             </div>
 
             {/* Input Area */}
-            <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-gemini-bg via-gemini-bg to-transparent pt-10 pb-6 px-4 md:px-8 flex justify-center">
-              <div className="w-full max-w-3xl bg-[#1e1f20] rounded-full flex items-center p-2 pl-6 shadow-2xl border border-white/5 ring-1 ring-white/5 focus-within:ring-blue-500/50 transition-all">
-                 <input 
-                   type="text" 
-                   value={input}
-                   onChange={(e) => setInput(e.target.value)}
-                   onKeyDown={handleKeyDown}
-                   placeholder="Ask about a coin (e.g., Bitcoin) or 'Swap 1 ETH to USDT'..."
-                   className="flex-1 bg-transparent border-none outline-none text-white placeholder-gray-500 h-10"
-                   disabled={isLoading}
-                 />
+            <div className="absolute bottom-0 left-0 right-0 pt-10 pb-6 px-4 md:px-8 flex flex-col items-center justify-end pointer-events-none bg-gradient-to-t from-gemini-bg via-gemini-bg to-transparent">
+              <div className="w-full max-w-3xl pointer-events-auto flex flex-col gap-3">
                  
-                 <div className="flex items-center gap-1 px-2">
-                    <button className="p-2 hover:bg-white/10 rounded-full text-gray-400 transition-colors">
-                      <Mic className="w-5 h-5" />
-                    </button>
-                    {input.trim() && (
-                      <button 
-                        onClick={handleSend}
-                        className="p-2 bg-blue-500 hover:bg-blue-600 rounded-full text-white transition-all shadow-lg shadow-blue-900/20"
-                      >
-                        <Send className="w-4 h-4" />
-                      </button>
-                    )}
+                 {/* Suggested Prompts as Vertical List (Only if chat is empty) */}
+                 {messages.length === 1 && !isLoading && (
+                    <div className="bg-[#1e1f20] border border-white/10 rounded-2xl overflow-hidden shadow-2xl animate-in fade-in slide-in-from-bottom-4 duration-500">
+                        {SUGGESTED_PROMPTS.map((item, idx) => (
+                           <button
+                              key={idx}
+                              onClick={() => setInput(item.prompt)}
+                              className="w-full text-left flex items-center justify-between p-3.5 hover:bg-white/5 transition-colors border-b border-white/5 last:border-0 group"
+                           >
+                              <div className="flex items-center gap-3">
+                                 <Search className="w-4 h-4 text-gray-400" />
+                                 <span className="text-gray-200 text-sm">{item.prompt}</span>
+                              </div>
+                              <ArrowUpRight className="w-4 h-4 text-gray-500 group-hover:text-blue-400 transition-colors" />
+                           </button>
+                        ))}
+                    </div>
+                 )}
+
+                 {/* Input Box */}
+                 <div className="w-full bg-[#1e1f20] rounded-full flex items-center p-2 pl-6 shadow-2xl border border-white/5 ring-1 ring-white/5 focus-within:ring-blue-500/50 transition-all">
+                    <input 
+                      type="text" 
+                      value={input}
+                      onChange={(e) => setInput(e.target.value)}
+                      onKeyDown={handleKeyDown}
+                      placeholder="Ask about a coin (e.g., Bitcoin) or 'Swap 1 ETH to USDT'..."
+                      className="flex-1 bg-transparent border-none outline-none text-white placeholder-gray-500 h-10"
+                      disabled={isLoading}
+                    />
+                    
+                    <div className="flex items-center gap-1 px-2">
+                        <button className="p-2 hover:bg-white/10 rounded-full text-gray-400 transition-colors">
+                          <Mic className="w-5 h-5" />
+                        </button>
+                        {input.trim() && (
+                          <button 
+                            onClick={handleSend}
+                            className="p-2 bg-blue-500 hover:bg-blue-600 rounded-full text-white transition-all shadow-lg shadow-blue-900/20"
+                          >
+                            <Send className="w-4 h-4" />
+                          </button>
+                        )}
+                    </div>
                  </div>
               </div>
               
-              <div className="absolute bottom-2 text-[10px] text-gray-600 font-medium text-center w-full pointer-events-none">
+              <div className="mt-2 text-[10px] text-gray-600 font-medium text-center w-full pointer-events-none">
                 Gemini can make mistakes, including about people, so double-check it.
               </div>
             </div>
