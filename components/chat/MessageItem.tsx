@@ -18,7 +18,7 @@ const MessageItem: React.FC<MessageItemProps> = ({ msg }) => {
       <div className={`w-8 h-8 md:w-10 md:h-10 rounded-full flex items-center justify-center shrink-0 mt-1 ${msg.role === 'model' ? 'bg-transparent' : 'bg-transparent'}`}>
          {msg.role === 'model' ? (
            <div className="relative">
-              <Sparkles className="w-6 h-6 text-blue-400 animate-pulse" />
+              <Sparkles className="w-6 h-6 text-blue-600 dark:text-blue-400 animate-pulse" />
               <div className="absolute inset-0 bg-blue-400/20 blur-lg rounded-full"></div>
            </div>
          ) : (
@@ -33,8 +33,8 @@ const MessageItem: React.FC<MessageItemProps> = ({ msg }) => {
         {msg.text && (
           <div className={`px-5 py-3.5 rounded-2xl text-[15px] leading-relaxed shadow-sm ${
             msg.role === 'user' 
-              ? 'bg-[#2d2e2f] text-white rounded-tr-none whitespace-pre-wrap' 
-              : 'text-gray-100 w-full'
+              ? 'bg-gray-100 text-gray-900 dark:bg-[#2d2e2f] dark:text-white rounded-tr-none whitespace-pre-wrap' 
+              : 'text-gray-800 dark:text-gray-100 w-full'
           }`}>
             {msg.role === 'user' ? (
               msg.text

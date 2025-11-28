@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Menu, Plus, MessageSquare, Trash2 } from 'lucide-react';
 import { ChatSession } from '../../types';
@@ -37,7 +38,7 @@ const Sidebar: React.FC<SidebarProps> = ({
       <div 
         className={`
           fixed md:static inset-y-0 left-0 z-30
-          flex flex-col h-full bg-[#1e1f20] shrink-0 border-r border-white/5 
+          flex flex-col h-full bg-gray-50 dark:bg-[#1e1f20] shrink-0 border-r border-gray-200 dark:border-white/5 
           transition-all duration-300 ease-in-out
           ${isOpen 
             ? 'translate-x-0 w-[280px]' 
@@ -47,12 +48,12 @@ const Sidebar: React.FC<SidebarProps> = ({
       >
         {/* Menu Toggle */}
         <div 
-          className={`flex items-center ${isOpen ? 'justify-start px-4 gap-4' : 'justify-center'} h-16 cursor-pointer hover:bg-white/5 transition-colors group whitespace-nowrap`}
+          className={`flex items-center ${isOpen ? 'justify-start px-4 gap-4' : 'justify-center'} h-16 cursor-pointer hover:bg-gray-200 dark:hover:bg-white/5 transition-colors group whitespace-nowrap`}
           onClick={toggleSidebar}
           title={isOpen ? "Collapse menu" : "Expand menu"}
         >
-          <Menu className="w-6 h-6 text-gray-400 group-hover:text-white transition-colors shrink-0" />
-          <span className={`font-medium text-gray-300 group-hover:text-white transition-opacity duration-200 ${isOpen ? 'opacity-100' : 'opacity-0 hidden'}`}>
+          <Menu className="w-6 h-6 text-gray-500 dark:text-gray-400 group-hover:text-gray-900 dark:group-hover:text-white transition-colors shrink-0" />
+          <span className={`font-medium text-gray-700 dark:text-gray-300 group-hover:text-gray-900 dark:group-hover:text-white transition-opacity duration-200 ${isOpen ? 'opacity-100' : 'opacity-0 hidden'}`}>
             Menu
           </span>
         </div>
@@ -62,7 +63,7 @@ const Sidebar: React.FC<SidebarProps> = ({
            <button 
              onClick={onNewChat}
              className={`
-                flex items-center gap-3 bg-[#2d2e2f] hover:bg-[#37393b] text-gray-200 rounded-full transition-all shadow-lg hover:shadow-xl border border-white/5 whitespace-nowrap overflow-hidden
+                flex items-center gap-3 bg-white dark:bg-[#2d2e2f] hover:bg-gray-100 dark:hover:bg-[#37393b] text-gray-700 dark:text-gray-200 rounded-full transition-all shadow-md hover:shadow-lg border border-gray-200 dark:border-white/5 whitespace-nowrap overflow-hidden
                 ${isOpen ? 'px-4 py-3 w-fit' : 'w-10 h-10 justify-center p-0'}
              `}
              title="New Chat"
@@ -76,7 +77,7 @@ const Sidebar: React.FC<SidebarProps> = ({
 
         {/* Recent List */}
         <div className={`flex-1 overflow-y-auto space-y-1 custom-scrollbar pr-2 transition-opacity duration-200 ${isOpen ? 'opacity-100' : 'opacity-0 hidden pointer-events-none'}`}>
-          <div className="px-4 text-xs font-medium text-gray-500 mb-2 uppercase tracking-wider whitespace-nowrap">Recent</div>
+          <div className="px-4 text-xs font-medium text-gray-500 dark:text-gray-500 mb-2 uppercase tracking-wider whitespace-nowrap">Recent</div>
           
           {sessions.map((session) => (
             <div 
@@ -84,18 +85,18 @@ const Sidebar: React.FC<SidebarProps> = ({
               onClick={() => onLoadSession(session.id)}
               className={`group flex items-center justify-between px-3 py-2 mx-2 text-sm rounded-lg cursor-pointer transition-all ${
                 activeSessionId === session.id && currentView === 'chat'
-                  ? 'bg-blue-500/20 text-blue-100' 
-                  : 'text-gray-300 hover:bg-white/5 hover:text-white'
+                  ? 'bg-blue-100 dark:bg-blue-500/20 text-blue-700 dark:text-blue-100' 
+                  : 'text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-white/5 hover:text-gray-900 dark:hover:text-white'
               }`}
             >
               <div className="flex items-center gap-3 overflow-hidden">
-                <MessageSquare className={`w-4 h-4 shrink-0 ${activeSessionId === session.id && currentView === 'chat' ? 'text-blue-400' : 'text-gray-500'}`} />
+                <MessageSquare className={`w-4 h-4 shrink-0 ${activeSessionId === session.id && currentView === 'chat' ? 'text-blue-500 dark:text-blue-400' : 'text-gray-400 dark:text-gray-500'}`} />
                 <span className="truncate">{session.title}</span>
               </div>
               
               <button 
                 onClick={(e) => onDeleteSession(e, session.id)}
-                className={`p-1 rounded-md hover:bg-red-500/20 hover:text-red-400 transition-colors opacity-0 group-hover:opacity-100 ${
+                className={`p-1 rounded-md hover:bg-red-100 dark:hover:bg-red-500/20 hover:text-red-600 dark:hover:text-red-400 transition-colors opacity-0 group-hover:opacity-100 ${
                     activeSessionId === session.id ? 'opacity-100' : ''
                 }`}
                 title="Delete chat"

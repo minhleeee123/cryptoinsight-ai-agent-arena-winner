@@ -69,6 +69,22 @@ const App: React.FC = () => {
   // New State for Landing Page
   const [showLanding, setShowLanding] = useState(true);
 
+  // Theme State
+  const [theme, setTheme] = useState<'light' | 'dark'>('dark');
+
+  // Apply theme to html tag
+  useEffect(() => {
+    if (theme === 'dark') {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+  }, [theme]);
+
+  const toggleTheme = () => {
+    setTheme(prev => prev === 'dark' ? 'light' : 'dark');
+  };
+
   const [input, setInput] = useState('');
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [currentView, setCurrentView] = useState<'chat' | 'profile'>('chat');
@@ -324,7 +340,7 @@ const App: React.FC = () => {
   }
 
   return (
-    <div className="flex h-screen w-full bg-[#131314] text-[#e3e3e3] overflow-hidden font-sans selection:bg-blue-500/30 relative">
+    <div className="flex h-screen w-full bg-white dark:bg-[#131314] text-gray-900 dark:text-[#e3e3e3] overflow-hidden font-sans selection:bg-blue-500/30 relative transition-colors duration-300">
       
       <Sidebar 
         isOpen={isSidebarOpen}
@@ -344,6 +360,8 @@ const App: React.FC = () => {
            currentView={currentView}
            setCurrentView={setCurrentView}
            userProfile={userProfile}
+           theme={theme}
+           toggleTheme={toggleTheme}
         />
 
         {/* CONTENT SWITCHER */}
@@ -364,7 +382,14 @@ const App: React.FC = () => {
               ref={scrollRef}
             >
               {messages.map((msg) => (
-                <MessageItem key={msg.id} msg={msg} />
+                <div key={msg.id} className={msg.data && msg.data.symbol ? "mb-2" : ""}>
+                    {/* Inject Theme prop into data components if needed (PriceChart) */}
+                    {msg.data && (
+                        React.cloneElement(<MessageItem msg={{...msg, data: undefined}} />, {}, null) 
+                    ) /* Hack to render text part only via MessageItem, handled inside MessageItem properly */}
+                    
+                    <MessageItem key={msg.id} msg={msg} />
+                </div>
               ))}
 
               {isLoading && <LoadingIndicator status={loadingStatus} />}

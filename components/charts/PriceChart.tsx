@@ -5,6 +5,7 @@ import { analyzeChartImage } from '../../services/agents/visionAgent';
 
 interface PriceChartProps {
   symbol: string; // e.g. "BTC", "SOL"
+  theme?: 'light' | 'dark';
 }
 
 interface ChartChatMessage {
@@ -20,7 +21,7 @@ declare global {
   }
 }
 
-const PriceChart: React.FC<PriceChartProps> = ({ symbol }) => {
+const PriceChart: React.FC<PriceChartProps> = ({ symbol, theme = 'dark' }) => {
   const containerId = useRef(`tv-widget-${Math.random().toString(36).substring(7)}`);
   const [isModalOpen, setIsModalOpen] = useState(false);
   
@@ -41,17 +42,17 @@ const PriceChart: React.FC<PriceChartProps> = ({ symbol }) => {
         "symbol": getTVSymbol(symbol),
         "interval": "D",
         "timezone": "Etc/UTC",
-        "theme": "dark",
+        "theme": theme, // Dynamic theme
         "style": "1", // Candle
         "locale": "en",
         "enable_publishing": false,
-        "backgroundColor": "rgba(19, 19, 20, 1)",
-        "gridColor": "rgba(50, 50, 50, 0.5)",
+        "backgroundColor": theme === 'dark' ? "rgba(19, 19, 20, 1)" : "rgba(255, 255, 255, 1)",
+        "gridColor": theme === 'dark' ? "rgba(50, 50, 50, 0.5)" : "rgba(230, 230, 230, 1)",
         "hide_top_toolbar": !isFull,
         "hide_legend": !isFull,
         "save_image": false,
         "container_id": containerId,
-        "toolbar_bg": "#1e1f20",
+        "toolbar_bg": theme === 'dark' ? "#1e1f20" : "#f3f4f6",
         "withdateranges": isFull,
         "hide_side_toolbar": !isFull,
         "allow_symbol_change": isFull,
@@ -59,14 +60,14 @@ const PriceChart: React.FC<PriceChartProps> = ({ symbol }) => {
     }
   };
 
-  // Effect for the small chart
+  // Re-run widget when symbol or theme changes
   useEffect(() => {
     const script = document.createElement('script');
     script.src = 'https://s3.tradingview.com/tv.js';
     script.async = true;
     script.onload = () => loadWidget(containerId.current, false);
     document.head.appendChild(script);
-  }, [symbol]);
+  }, [symbol, theme]);
 
   // Effect for the modal chart
   useEffect(() => {
@@ -82,7 +83,7 @@ const PriceChart: React.FC<PriceChartProps> = ({ symbol }) => {
             loadWidget("tv-modal-container", true);
         }, 100);
     }
-  }, [isModalOpen, symbol]);
+  }, [isModalOpen, symbol, theme]);
 
   const captureAndAnalyze = async () => {
     try {
@@ -132,8 +133,6 @@ const PriceChart: React.FC<PriceChartProps> = ({ symbol }) => {
         setChatMessages(prev => [...prev, { id: userMsgId, role: 'user', text: "Analyze the chart lines I just drew." }]);
         
         const modelMsgId = (Date.now() + 1).toString();
-        // Create initial empty model message placeholder removed, wait for full response
-        
         // Call non-streaming service
         const analysisText = await analyzeChartImage(base64Image, "Analyze the technical indicators, support/resistance levels, and chart patterns visible in this image. Provide a trading setup recommendation.");
 
@@ -166,44 +165,44 @@ const PriceChart: React.FC<PriceChartProps> = ({ symbol }) => {
   return (
     <>
         {/* Main Dashboard Widget */}
-        <div className="w-full h-[250px] bg-gemini-surface rounded-xl p-1 border border-white/10 relative group overflow-hidden">
+        <div className="w-full h-[250px] bg-white dark:bg-[#1e1f20] rounded-xl p-1 border border-gray-200 dark:border-white/10 relative group overflow-hidden shadow-sm">
             <div id={containerId.current} className="w-full h-full rounded-lg" />
             
             {/* Overlay to intercept clicks */}
             <div 
                 onClick={() => setIsModalOpen(true)}
-                className="absolute inset-0 bg-black/0 hover:bg-black/10 transition-colors cursor-pointer z-10 flex items-center justify-center group"
+                className="absolute inset-0 bg-black/0 hover:bg-black/5 dark:hover:bg-black/10 transition-colors cursor-pointer z-10 flex items-center justify-center group"
                 title="Click to open advanced chart"
             >
-                <div className="bg-black/50 p-2 rounded-full opacity-0 group-hover:opacity-100 transition-opacity transform scale-75 group-hover:scale-100 backdrop-blur-sm">
-                    <Maximize2 className="w-5 h-5 text-white" />
+                <div className="bg-white/80 dark:bg-black/50 p-2 rounded-full opacity-0 group-hover:opacity-100 transition-opacity transform scale-75 group-hover:scale-100 backdrop-blur-sm shadow-lg">
+                    <Maximize2 className="w-5 h-5 text-gray-800 dark:text-white" />
                 </div>
             </div>
             
-            <h3 className="absolute top-2 left-3 text-xs font-bold text-gray-500 pointer-events-none z-20 opacity-50">
+            <h3 className="absolute top-2 left-3 text-xs font-bold text-gray-400 dark:text-gray-500 pointer-events-none z-20 opacity-50">
                 TradingView
             </h3>
         </div>
 
         {/* Full Screen Modal */}
         {isModalOpen && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-md p-4 animate-in fade-in duration-200">
-                <div className="bg-[#131314] w-full max-w-[95vw] h-[90vh] rounded-2xl border border-white/10 relative flex flex-col shadow-2xl overflow-hidden">
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 dark:bg-black/90 backdrop-blur-md p-4 animate-in fade-in duration-200">
+                <div className="bg-gray-50 dark:bg-[#131314] w-full max-w-[95vw] h-[90vh] rounded-2xl border border-gray-200 dark:border-white/10 relative flex flex-col shadow-2xl overflow-hidden">
                     
                     {/* Modal Header */}
-                    <div className="flex items-center justify-between p-3 border-b border-white/10 bg-[#1e1f20] shrink-0">
+                    <div className="flex items-center justify-between p-3 border-b border-gray-200 dark:border-white/10 bg-white dark:bg-[#1e1f20] shrink-0">
                         <div className="flex items-center gap-3">
                              <div className="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center">
                                 <Bot className="w-5 h-5 text-white" />
                              </div>
                              <div>
-                                <h2 className="text-white font-bold text-lg">{symbol} Technical Analysis</h2>
+                                <h2 className="text-gray-900 dark:text-white font-bold text-lg">{symbol} Technical Analysis</h2>
                                 <span className="text-gray-500 text-xs">Draw on the chart & ask AI</span>
                              </div>
                         </div>
                         <button 
                             onClick={() => setIsModalOpen(false)}
-                            className="p-2 hover:bg-white/10 rounded-full text-gray-400 hover:text-white transition-colors"
+                            className="p-2 hover:bg-gray-100 dark:hover:bg-white/10 rounded-full text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
                         >
                             <X className="w-6 h-6" />
                         </button>
@@ -213,7 +212,7 @@ const PriceChart: React.FC<PriceChartProps> = ({ symbol }) => {
                     <div className="flex-1 flex overflow-hidden">
                         
                         {/* LEFT: TradingView Chart (75%) */}
-                        <div className="w-3/4 h-full border-r border-white/10 bg-black relative">
+                        <div className="w-3/4 h-full border-r border-gray-200 dark:border-white/10 bg-white dark:bg-black relative">
                             <div id="tv-modal-container" className="w-full h-full" />
                             
                             {/* Analyze Button Overlay */}
@@ -237,7 +236,7 @@ const PriceChart: React.FC<PriceChartProps> = ({ symbol }) => {
                         </div>
 
                         {/* RIGHT: Chat Interface (25%) */}
-                        <div className="w-1/4 h-full bg-[#1e1f20] flex flex-col">
+                        <div className="w-1/4 h-full bg-gray-50 dark:bg-[#1e1f20] flex flex-col">
                              {/* Chat List */}
                              <div className="flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar">
                                 {chatMessages.map((msg) => (
@@ -245,7 +244,7 @@ const PriceChart: React.FC<PriceChartProps> = ({ symbol }) => {
                                         <div className={`max-w-[90%] px-4 py-3 rounded-2xl text-sm whitespace-pre-wrap ${
                                             msg.role === 'user' 
                                                 ? 'bg-blue-600 text-white rounded-br-none' 
-                                                : 'bg-[#2d2e2f] text-gray-200 rounded-bl-none border border-white/5'
+                                                : 'bg-white dark:bg-[#2d2e2f] text-gray-800 dark:text-gray-200 rounded-bl-none border border-gray-200 dark:border-white/5 shadow-sm'
                                         }`}>
                                             {msg.text}
                                         </div>
@@ -256,24 +255,24 @@ const PriceChart: React.FC<PriceChartProps> = ({ symbol }) => {
                                 ))}
                                 {isAnalyzing && chatMessages.length > 0 && chatMessages[chatMessages.length - 1].role === 'user' && (
                                     <div className="flex justify-start">
-                                        <div className="bg-[#2d2e2f] px-4 py-3 rounded-2xl rounded-bl-none flex items-center gap-2 border border-white/5">
+                                        <div className="bg-white dark:bg-[#2d2e2f] px-4 py-3 rounded-2xl rounded-bl-none flex items-center gap-2 border border-gray-200 dark:border-white/5 shadow-sm">
                                             <Loader2 className="w-4 h-4 text-blue-400 animate-spin" />
-                                            <span className="text-xs text-gray-400">Capturing & Analyzing...</span>
+                                            <span className="text-xs text-gray-500 dark:text-gray-400">Capturing & Analyzing...</span>
                                         </div>
                                     </div>
                                 )}
                              </div>
 
                              {/* Input Area */}
-                             <div className="p-3 border-t border-white/10 bg-[#1e1f20]">
-                                <div className="flex items-center gap-2 bg-black/30 p-2 rounded-xl border border-white/5 focus-within:border-blue-500/50 transition-colors">
+                             <div className="p-3 border-t border-gray-200 dark:border-white/10 bg-white dark:bg-[#1e1f20]">
+                                <div className="flex items-center gap-2 bg-gray-100 dark:bg-black/30 p-2 rounded-xl border border-gray-200 dark:border-white/5 focus-within:border-blue-500/50 transition-colors">
                                     <input 
                                         type="text" 
                                         value={chatInput}
                                         onChange={(e) => setChatInput(e.target.value)}
                                         onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()}
                                         placeholder="Ask about levels..."
-                                        className="flex-1 bg-transparent text-sm text-white placeholder-gray-500 outline-none"
+                                        className="flex-1 bg-transparent text-sm text-gray-900 dark:text-white placeholder-gray-500 outline-none"
                                     />
                                     <button 
                                         onClick={handleSendMessage}

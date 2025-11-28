@@ -1,3 +1,4 @@
+
 import React from 'react';
 
 export const InlineFormat = ({ text }: { text: string }) => {
@@ -7,7 +8,7 @@ export const InlineFormat = ({ text }: { text: string }) => {
     <>
       {parts.map((part, i) => {
         if (part.startsWith('**') && part.endsWith('**')) {
-          return <strong key={i} className="font-bold text-blue-200">{part.slice(2, -2)}</strong>;
+          return <strong key={i} className="font-bold text-gray-900 dark:text-blue-200">{part.slice(2, -2)}</strong>;
         }
         return <span key={i}>{part}</span>;
       })}
@@ -27,7 +28,7 @@ export const FormattedMessage = ({ text }: { text: string }) => {
         // Header 3 (### Title)
         if (line.startsWith('### ')) {
           return (
-            <h3 key={i} className="text-lg font-bold text-blue-400 mt-5 mb-2">
+            <h3 key={i} className="text-lg font-bold text-blue-700 dark:text-blue-400 mt-5 mb-2">
               <InlineFormat text={line.replace('### ', '')} />
             </h3>
           );
@@ -36,7 +37,7 @@ export const FormattedMessage = ({ text }: { text: string }) => {
         // Header 2 or 1 treated similarly
         if (line.startsWith('## ')) {
             return (
-              <h2 key={i} className="text-xl font-bold text-blue-300 mt-6 mb-3">
+              <h2 key={i} className="text-xl font-bold text-blue-800 dark:text-blue-300 mt-6 mb-3">
                 <InlineFormat text={line.replace('## ', '')} />
               </h2>
             );
@@ -46,8 +47,8 @@ export const FormattedMessage = ({ text }: { text: string }) => {
         if (trimmed.startsWith('- ') || trimmed.startsWith('* ')) {
           return (
             <div key={i} className="flex gap-3 ml-1 mb-1">
-              <span className="text-blue-400/80 mt-1.5 text-[10px] font-bold">●</span>
-              <p className="text-gray-200 leading-relaxed">
+              <span className="text-blue-500 dark:text-blue-400/80 mt-1.5 text-[10px] font-bold">●</span>
+              <p className="text-gray-800 dark:text-gray-200 leading-relaxed">
                 <InlineFormat text={trimmed.replace(/^[-*] /, '')} />
               </p>
             </div>
@@ -61,7 +62,7 @@ export const FormattedMessage = ({ text }: { text: string }) => {
 
         // Standard Paragraph
         return (
-          <p key={i} className="text-gray-200 leading-relaxed mb-1">
+          <p key={i} className="text-gray-800 dark:text-gray-200 leading-relaxed mb-1">
             <InlineFormat text={line} />
           </p>
         );
