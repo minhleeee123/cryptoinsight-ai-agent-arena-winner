@@ -10,10 +10,11 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
   return (
     <div className="min-h-screen bg-[#050505] text-white overflow-x-hidden font-sans selection:bg-blue-500/30">
       
-      {/* Background Gradients */}
+      {/* Background Gradients - Adjusted for seamless look */}
       <div className="fixed inset-0 pointer-events-none">
-        <div className="absolute top-[-10%] left-[20%] w-[500px] h-[500px] bg-blue-600/20 rounded-full blur-[120px] mix-blend-screen animate-pulse duration-3000" />
-        <div className="absolute bottom-[-10%] right-[10%] w-[600px] h-[600px] bg-purple-600/10 rounded-full blur-[120px] mix-blend-screen" />
+        <div className="absolute top-[-10%] left-[20%] w-[500px] h-[500px] bg-blue-600/10 rounded-full blur-[120px] mix-blend-screen animate-pulse duration-3000" />
+        <div className="absolute bottom-[-10%] right-[10%] w-[600px] h-[600px] bg-purple-600/5 rounded-full blur-[120px] mix-blend-screen" />
+        <div className="absolute top-[40%] left-[-10%] w-[400px] h-[400px] bg-cyan-600/5 rounded-full blur-[100px] mix-blend-screen" />
       </div>
 
       {/* Navbar */}
@@ -71,8 +72,8 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
 
       </main>
 
-      {/* Workflow Section */}
-      <section className="py-24 bg-[#0a0a0a] border-t border-white/5">
+      {/* Workflow Section - Removed bg color for seamlessness */}
+      <section className="py-24 relative">
         <div className="max-w-7xl mx-auto px-6">
             <div className="text-center mb-16">
                 <h2 className="text-3xl md:text-4xl font-bold mb-4">How It Works</h2>
@@ -106,7 +107,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
       </section>
 
       {/* Deep Dive Features - Split Layouts */}
-      <section className="py-24 overflow-hidden">
+      <section className="py-24 overflow-hidden relative">
         <div className="max-w-7xl mx-auto px-6 space-y-32">
             
             {/* Feature 1: Vision */}
@@ -317,8 +318,8 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
         </div>
       </section>
 
-      {/* Grid Features */}
-      <section className="max-w-7xl mx-auto px-6 py-24 border-t border-white/5 bg-[#050505]/50 backdrop-blur-sm">
+      {/* Grid Features - Removed bg color for seamlessness */}
+      <section className="max-w-7xl mx-auto px-6 py-24 relative">
         <div className="text-center mb-12">
             <h2 className="text-3xl font-bold mb-4">Everything you need</h2>
         </div>
@@ -347,7 +348,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
       </section>
 
       {/* FAQ Section */}
-      <section className="max-w-3xl mx-auto px-6 py-24">
+      <section className="max-w-3xl mx-auto px-6 py-24 relative">
          <h2 className="text-3xl font-bold text-center mb-12">Frequently Asked Questions</h2>
          <div className="space-y-4">
             <FAQItem 
@@ -367,7 +368,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
 
       {/* Bottom CTA */}
       <section className="py-24 relative overflow-hidden">
-         <div className="absolute inset-0 bg-blue-900/10" />
+         <div className="absolute inset-0 bg-blue-900/10 pointer-events-none" />
          <div className="max-w-4xl mx-auto px-6 text-center relative z-10">
             <h2 className="text-4xl md:text-5xl font-bold mb-6">Ready to upgrade your trading?</h2>
             <p className="text-xl text-gray-400 mb-10">Join thousands of traders using AI to navigate the market.</p>
@@ -380,8 +381,8 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
          </div>
       </section>
 
-      {/* Footer */}
-      <footer className="border-t border-white/5 py-12 bg-[#020202]">
+      {/* Footer - Transparent bg to blend with seamless theme */}
+      <footer className="py-12 relative border-t border-white/5">
         <div className="max-w-7xl mx-auto px-6 flex flex-col md:flex-row justify-between items-center gap-6">
             <div className="flex items-center gap-2">
                 <Sparkles className="w-5 h-5 text-blue-500" />
