@@ -85,7 +85,8 @@ const TransactionCard: React.FC<Props> = ({ data }) => {
 
         if (!destination) throw new Error("Destination address required");
 
-        const result = await sendTransaction(destination, amount);
+        // Pass the 'network' state to enforce switching
+        const result = await sendTransaction(destination, amount, network);
         
         if (result && result.hash) {
             setTxHash(result.hash);
