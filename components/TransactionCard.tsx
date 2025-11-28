@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { TransactionData } from '../types';
 import { sendTransaction } from '../services/web3Service';
-import { ArrowRight, Check, AlertCircle, Loader2, Wallet, Settings } from 'lucide-react';
+import { ArrowRight, Check, AlertCircle, Loader2, Wallet, Settings, RefreshCw } from 'lucide-react';
 
 interface Props {
   data: TransactionData;
@@ -20,19 +20,51 @@ const TransactionCard: React.FC<Props> = ({ data }) => {
   const [amount, setAmount] = useState<string>(data.amount ? data.amount.toString() : '');
   const [token, setToken] = useState<string>(data.token || 'ETH');
   const [targetToken, setTargetToken] = useState<string>(data.targetToken || '');
+  const [targetAmount, setTargetAmount] = useState<string>('');
   const [toAddress, setToAddress] = useState<string>(data.toAddress || '');
   const [network, setNetwork] = useState<string>(data.network || 'Ethereum Mainnet');
+  
+  const [isCalculating, setIsCalculating] = useState(false);
+
+  // Mock Rate Calculation Logic
+  useEffect(() => {
+    if (type === 'SWAP' && amount && token && targetToken) {
+        setIsCalculating(true);
+        const timer = setTimeout(() => {
+            // Mock Exchange Rates
+            let rate = 1;
+            const pair = `${token.toUpperCase()}-${targetToken.toUpperCase()}`;
+            
+            // Basic Mock Logic
+            if (pair === 'ETH-USDT') rate = 3200;
+            else if (pair === 'USDT-ETH') rate = 1 / 3200;
+            else if (pair === 'BTC-USDT') rate = 65000;
+            else if (pair === 'USDT-BTC') rate = 1 / 65000;
+            else if (pair === 'SOL-USDT') rate = 145;
+            else if (pair === 'USDT-SOL') rate = 1 / 145;
+            else rate = Math.random() * 2 + 0.5; // Random rate for unknown pairs
+
+            const val = parseFloat(amount) * rate;
+            // Format: Less decimals for USDT, more for tokens
+            setTargetAmount(val < 1 ? val.toFixed(6) : val.toFixed(2));
+            setIsCalculating(false);
+        }, 800); // Simulate API delay
+
+        return () => clearTimeout(timer);
+    } else {
+        setTargetAmount('');
+    }
+  }, [amount, token, targetToken, type]);
 
   // Form Validation
   const isValid = () => {
     const isAmountValid = parseFloat(amount) > 0;
-    const isNetworkValid = !!network;
     
     if (type === 'SEND') {
-        return isAmountValid && isNetworkValid && !!toAddress && !!token;
+        return isAmountValid && !!network && !!toAddress && !!token;
     } else {
-        // SWAP
-        return isAmountValid && isNetworkValid && !!token && !!targetToken;
+        // SWAP: Network is NOT required
+        return isAmountValid && !!token && !!targetToken;
     }
   };
 
@@ -89,25 +121,27 @@ const TransactionCard: React.FC<Props> = ({ data }) => {
 
       <div className="p-5 space-y-5">
         
-        {/* Network Selection */}
-        <div className="space-y-1">
-            <label className="text-xs text-gray-400 font-medium ml-1">Network</label>
-            <div className="relative">
-                <select 
-                    value={network}
-                    onChange={(e) => setNetwork(e.target.value)}
-                    className="w-full bg-black/20 text-gray-200 text-sm rounded-lg p-2.5 border border-white/10 outline-none focus:border-blue-500/50 appearance-none"
-                >
-                    {NETWORKS.map(n => <option key={n} value={n}>{n}</option>)}
-                </select>
-                <Settings className="w-4 h-4 text-gray-500 absolute right-3 top-2.5 pointer-events-none" />
+        {/* Network Selection - ONLY FOR SEND */}
+        {type === 'SEND' && (
+            <div className="space-y-1">
+                <label className="text-xs text-gray-400 font-medium ml-1">Network</label>
+                <div className="relative">
+                    <select 
+                        value={network}
+                        onChange={(e) => setNetwork(e.target.value)}
+                        className="w-full bg-black/20 text-gray-200 text-sm rounded-lg p-2.5 border border-white/10 outline-none focus:border-blue-500/50 appearance-none"
+                    >
+                        {NETWORKS.map(n => <option key={n} value={n}>{n}</option>)}
+                    </select>
+                    <Settings className="w-4 h-4 text-gray-500 absolute right-3 top-2.5 pointer-events-none" />
+                </div>
             </div>
-        </div>
+        )}
 
         {/* Amount & Token Input Row */}
         <div className="flex gap-3">
             <div className="flex-1 space-y-1">
-                <label className="text-xs text-gray-400 font-medium ml-1">Amount</label>
+                <label className="text-xs text-gray-400 font-medium ml-1">Pay</label>
                 <input 
                     type="number" 
                     placeholder="0.00"
@@ -150,8 +184,16 @@ const TransactionCard: React.FC<Props> = ({ data }) => {
                 <div className="space-y-1">
                     <label className="text-xs text-gray-400 font-medium ml-1">Receive (Estimated)</label>
                     <div className="flex gap-3">
-                         <div className="flex-1 bg-black/20 rounded-lg p-3 border border-white/10 flex items-center text-gray-500 text-sm cursor-not-allowed">
-                            Auto-Calculate
+                         <div className="flex-1 bg-black/20 rounded-lg p-3 border border-white/10 flex items-center justify-between">
+                            {isCalculating ? (
+                                <span className="flex items-center gap-2 text-gray-500 text-sm">
+                                    <Loader2 className="w-4 h-4 animate-spin" /> Calculating...
+                                </span>
+                            ) : (
+                                <span className="text-lg font-bold text-gray-300">
+                                    {targetAmount || "0.00"}
+                                </span>
+                            )}
                          </div>
                          <input 
                             type="text" 
