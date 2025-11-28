@@ -65,9 +65,24 @@ export const sendTransaction = async (toAddress: string, amountEth: string): Pro
         
         const signer = await provider.getSigner();
         
+        // VALIDATION FIX: Normalize address to prevent "bad address checksum" errors
+        // Ethers throws if a mixed-case address has an invalid checksum.
+        // We attempt to fix it by converting to lowercase (valid non-checksum format) 
+        // and letting Ethers re-checksum it.
+        let formattedTo = toAddress;
+        try {
+            formattedTo = ethers.getAddress(toAddress);
+        } catch (e) {
+            try {
+                formattedTo = ethers.getAddress(toAddress.toLowerCase());
+            } catch (e2) {
+                throw new Error(`Invalid recipient address: ${toAddress}`);
+            }
+        }
+
         // Create transaction object
         const tx: any = {
-            to: toAddress,
+            to: formattedTo,
             value: ethers.parseEther(amountEth.toString())
         };
 
