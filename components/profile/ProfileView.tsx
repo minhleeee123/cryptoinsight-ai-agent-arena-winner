@@ -1,8 +1,8 @@
-import React, { useEffect, useState } from 'react';
-import { User, ArrowLeft, RefreshCw, Link2, X, Mail, Shield, Wallet, TrendingUp, TrendingDown, Building2 } from 'lucide-react';
+
+import React, { useEffect } from 'react';
+import { User, ArrowLeft, RefreshCw, Link2, X, Mail, Shield, Wallet, TrendingUp, TrendingDown } from 'lucide-react';
 import { formatAddress } from '../../services/web3Service';
-import { getBinanceBalances } from '../../services/binanceService';
-import { PortfolioItem, BinanceBalance } from '../../types';
+import { PortfolioItem } from '../../types';
 
 interface ProfileProps {
     user: {
@@ -21,18 +21,11 @@ interface ProfileProps {
 }
 
 const ProfileView: React.FC<ProfileProps> = ({ user, onBack, onRefreshPrices, onConnectWallet, onDisconnectWallet, isRefreshing }) => {
-  const [binanceAssets, setBinanceAssets] = useState<{spot: BinanceBalance[], futures: BinanceBalance[]}>({ spot: [], futures: [] });
   
   // Auto refresh when mounting profile view
   useEffect(() => {
     onRefreshPrices();
-    fetchBinance();
   }, []);
-
-  const fetchBinance = async () => {
-      const balances = await getBinanceBalances();
-      setBinanceAssets(balances);
-  };
 
   // Calculate current total balance based on real-time prices
   const currentTotalBalance = user.portfolio.reduce((sum, item) => sum + (item.amount * item.currentPrice), 0);
@@ -50,7 +43,7 @@ const ProfileView: React.FC<ProfileProps> = ({ user, onBack, onRefreshPrices, on
                 <h1 className="text-2xl font-bold text-white">My Profile</h1>
             </div>
             <button 
-                onClick={() => { onRefreshPrices(); fetchBinance(); }}
+                onClick={() => { onRefreshPrices(); }}
                 disabled={isRefreshing}
                 className={`p-2 rounded-full transition-all ${isRefreshing ? 'bg-blue-500/20 text-blue-400' : 'hover:bg-white/10 text-gray-400'}`}
                 title="Refresh Prices"
@@ -179,57 +172,6 @@ const ProfileView: React.FC<ProfileProps> = ({ user, onBack, onRefreshPrices, on
              </table>
            </div>
         </div>
-
-        {/* Binance Testnet Assets */}
-        <div className="bg-[#1e1f20] rounded-2xl border border-yellow-500/20 overflow-hidden">
-            <div className="p-6 border-b border-white/5 flex items-center gap-2 bg-yellow-900/10">
-                <Building2 className="w-5 h-5 text-yellow-400" />
-                <h3 className="text-lg font-semibold text-gray-100">Exchange Assets (Testnet)</h3>
-            </div>
-            
-            <div className="p-6 grid md:grid-cols-2 gap-8">
-                {/* Spot */}
-                <div>
-                    <h4 className="text-sm font-bold text-gray-400 mb-3 uppercase tracking-wider">Spot Wallet</h4>
-                    {binanceAssets.spot.length > 0 ? (
-                        <div className="space-y-2">
-                            {binanceAssets.spot.map((b) => (
-                                <div key={b.asset} className="flex justify-between items-center bg-white/5 p-2 rounded-lg">
-                                    <span className="font-bold text-white">{b.asset}</span>
-                                    <div className="text-right">
-                                        <div className="text-sm text-gray-200">{b.free.toFixed(4)}</div>
-                                        {b.locked > 0 && <div className="text-xs text-gray-500">Locked: {b.locked}</div>}
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                    ) : (
-                        <div className="text-sm text-gray-500 italic">No assets found on testnet.</div>
-                    )}
-                </div>
-
-                {/* Futures */}
-                <div>
-                    <h4 className="text-sm font-bold text-gray-400 mb-3 uppercase tracking-wider">Futures Wallet</h4>
-                    {binanceAssets.futures.length > 0 ? (
-                        <div className="space-y-2">
-                            {binanceAssets.futures.map((b) => (
-                                <div key={b.asset} className="flex justify-between items-center bg-white/5 p-2 rounded-lg">
-                                    <span className="font-bold text-white">{b.asset}</span>
-                                    <div className="text-right">
-                                        <div className="text-sm text-gray-200">{b.free.toFixed(4)}</div>
-                                        {b.locked > 0 && <div className="text-xs text-gray-500">Margin: {b.locked.toFixed(2)}</div>}
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                    ) : (
-                         <div className="text-sm text-gray-500 italic">No assets found on testnet.</div>
-                    )}
-                </div>
-            </div>
-        </div>
-
       </div>
     </div>
   );

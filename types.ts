@@ -47,21 +47,21 @@ export interface TransactionData {
 }
 
 // Binance Types
-export interface BinanceOrder {
-    symbol: string;
-    side: 'BUY' | 'SELL';
-    type: 'MARKET' | 'LIMIT';
-    quantity: number; // Amount in COIN (e.g. 0.001 BTC)
-    leverage?: number; // Only for futures
-    market: 'SPOT' | 'FUTURES';
-    price?: number; // For Limit orders
-    summary: string; // Explanation of the order
-}
-
 export interface BinanceBalance {
     asset: string;
     free: number;
     locked: number;
+}
+
+export interface BinanceOrder {
+    market: 'SPOT' | 'FUTURES';
+    symbol: string;
+    side: 'BUY' | 'SELL';
+    type: 'MARKET' | 'LIMIT';
+    quantity: number;
+    price?: number;
+    leverage?: number;
+    summary: string;
 }
 
 export interface ChatMessage {
