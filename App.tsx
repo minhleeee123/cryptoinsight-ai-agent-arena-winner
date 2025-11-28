@@ -2,7 +2,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { TrendingUp, PieChart, ArrowRightLeft } from 'lucide-react';
 import { ChatMessage, CryptoData, ChatSession, PortfolioItem, TransactionData } from './types';
-import { analyzeCoin, generateMarketReport, determineIntent, chatWithModel, analyzePortfolio, updatePortfolioRealTime, createTransactionPreview, createBinanceOrderPreview } from './services/geminiService';
+import { analyzeCoin, generateMarketReport, determineIntent, chatWithModel, analyzePortfolio, updatePortfolioRealTime, createTransactionPreview } from './services/geminiService';
 import { connectToMetaMask } from './services/web3Service';
 
 // UI Components
@@ -279,17 +279,6 @@ const App: React.FC = () => {
             text: `I've prepared the transaction for you. Please review the details below.`
         };
         setMessages(prev => [...prev, txMsg]);
-
-      } else if (intent.type === 'BINANCE_ORDER') {
-        setLoadingStatus('creating-transaction');
-        const orderData = await createBinanceOrderPreview(currentInput);
-        const orderMsg: ChatMessage = {
-            id: (Date.now() + 1).toString(),
-            role: 'model',
-            binanceOrder: orderData,
-            text: `I've prepared the Binance order for you. Please review the details below.`
-        };
-        setMessages(prev => [...prev, orderMsg]);
 
       } else {
         setLoadingStatus('thinking');

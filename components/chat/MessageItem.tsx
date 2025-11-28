@@ -4,7 +4,6 @@ import { User, Sparkles } from 'lucide-react';
 import { ChatMessage } from '../../types';
 import CryptoDashboard from '../CryptoDashboard';
 import TransactionCard from '../TransactionCard';
-import BinanceOrderCard from '../BinanceOrderCard';
 import { FormattedMessage } from '../ui/MarkdownRenderer';
 
 interface MessageItemProps {
@@ -55,13 +54,6 @@ const MessageItem: React.FC<MessageItemProps> = ({ msg }) => {
         {msg.transactionData && (
             <div className="w-full mt-2">
                 <TransactionCard data={msg.transactionData} />
-            </div>
-        )}
-
-        {/* Binance Order Card */}
-        {msg.binanceOrder && (
-            <div className="w-full mt-2">
-                <BinanceOrderCard order={msg.binanceOrder} />
             </div>
         )}
       </div>

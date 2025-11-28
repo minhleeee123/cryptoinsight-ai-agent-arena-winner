@@ -1,6 +1,6 @@
 
 import { GoogleGenAI, Type, Schema } from "@google/genai";
-import { CryptoData, ChatMessage, PortfolioItem, PricePoint, LongShortData, TransactionData, BinanceOrder } from "../types";
+import { CryptoData, ChatMessage, PortfolioItem, PricePoint, LongShortData, TransactionData } from "../types";
 
 const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
@@ -72,21 +72,6 @@ const transactionSchema: Schema = {
     summary: { type: Type.STRING }
   },
   required: ["type", "token", "amount", "toAddress", "network", "estimatedGas", "summary"]
-};
-
-const binanceOrderSchema: Schema = {
-  type: Type.OBJECT,
-  properties: {
-    market: { type: Type.STRING, enum: ["SPOT", "FUTURES"] },
-    symbol: { type: Type.STRING },
-    side: { type: Type.STRING, enum: ["BUY", "SELL"] },
-    type: { type: Type.STRING, enum: ["MARKET", "LIMIT"] },
-    quantity: { type: Type.NUMBER },
-    price: { type: Type.NUMBER },
-    leverage: { type: Type.NUMBER },
-    summary: { type: Type.STRING }
-  },
-  required: ["market", "symbol", "side", "type", "quantity", "summary"]
 };
 
 // --- REAL DATA FETCHING FUNCTIONS ---
@@ -271,7 +256,7 @@ export const createTransactionPreview = async (userText: string): Promise<Transa
          - If SWAP/BUY/SELL, use the Uniswap V2 Router address: '0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D'.
          - If SEND and no address provided, use a placeholder '0x0000...0000' but mention in summary user needs to verify.
       4. Network: Assume 'Ethereum Mainnet' or 'Sepolia Testnet' based on context, default to 'Ethereum Mainnet'.
-      5. Estimated Gas: Estimate standard ETH gas (e.g., 0.002 ETH).
+      5. Estimated Gas: Estimate standard ETH gas (e.g. 0.002 ETH).
       
       Example: "Swap 1 ETH for USDT" -> Type: SWAP, Token: ETH, Amount: 1, To: RouterAddress.
       Example: "Send 0.5 ETH to 0x123..." -> Type: SEND, Token: ETH, Amount: 0.5, To: 0x123...
@@ -294,42 +279,6 @@ export const createTransactionPreview = async (userText: string): Promise<Transa
         throw new Error("Failed to parse transaction");
     } catch (error) {
         console.error("Transaction Parse Error", error);
-        throw error;
-    }
-}
-
-export const createBinanceOrderPreview = async (userText: string): Promise<BinanceOrder> => {
-    const systemPrompt = `
-      You are a Binance Trading Agent. Your job is to extract trading details from the user's natural language request.
-      
-      Rules:
-      1. Detect Market: 'FUTURES' if "short", "long", "leverage", "perp" mentioned, otherwise 'SPOT'.
-      2. Symbol: Convert to Binance Pair (e.g. BTC -> BTCUSDT, ETH -> ETHUSDT).
-      3. Type: 'LIMIT' if price specified (e.g. "at 50000"), else 'MARKET'.
-      4. Side: 'BUY' (Long/Buy), 'SELL' (Short/Sell).
-      5. Quantity: Extract amount.
-      6. Leverage: Extract if present (e.g. "20x"), default to 1 for SPOT, 20 for FUTURES if unspecified but implied high risk.
-      
-      Example: "Long BTC 20x with 0.5 BTC" -> Market: FUTURES, Symbol: BTCUSDT, Side: BUY, Quantity: 0.5, Leverage: 20.
-    `;
-
-    try {
-        const response = await ai.models.generateContent({
-            model: "gemini-2.5-flash",
-            contents: `Parse this order: "${userText}"`,
-            config: {
-                systemInstruction: systemPrompt,
-                responseMimeType: "application/json",
-                responseSchema: binanceOrderSchema
-            }
-        });
-
-        if (response.text) {
-            return JSON.parse(response.text) as BinanceOrder;
-        }
-        throw new Error("Failed to parse order");
-    } catch (error) {
-        console.error("Binance Parse Error", error);
         throw error;
     }
 }
@@ -358,7 +307,7 @@ export async function generateMarketReport(data: CryptoData): Promise<string> {
   }
 }
 
-export const determineIntent = async (userMessage: string): Promise<{ type: 'ANALYZE' | 'CHAT' | 'PORTFOLIO_ANALYSIS' | 'TRANSACTION' | 'BINANCE_ORDER'; coinName?: string }> => {
+export const determineIntent = async (userMessage: string): Promise<{ type: 'ANALYZE' | 'CHAT' | 'PORTFOLIO_ANALYSIS' | 'TRANSACTION'; coinName?: string }> => {
   try {
     const response = await ai.models.generateContent({
       model: "gemini-2.5-flash",
@@ -366,8 +315,7 @@ export const determineIntent = async (userMessage: string): Promise<{ type: 'ANA
       1. New coin analysis (e.g. "Analyze BTC", "How is Solana doing") -> {"type": "ANALYZE", "coinName": "CorrectedName"}
       2. Portfolio analysis (e.g. "Check my wallet", "My portfolio") -> {"type": "PORTFOLIO_ANALYSIS"}
       3. Web3 Transaction (e.g. "Send 1 ETH", "Swap ETH for USDT") -> {"type": "TRANSACTION"}
-      4. Binance Trading (e.g. "Long BTC", "Buy BNB on Binance", "Short ETH") -> {"type": "BINANCE_ORDER"}
-      5. General chat -> {"type": "CHAT"}`,
+      4. General chat -> {"type": "CHAT"}`,
       config: { responseMimeType: "application/json" }
     });
     return response.text ? JSON.parse(response.text) : { type: 'CHAT' };
