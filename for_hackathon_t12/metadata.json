@@ -1,0 +1,7 @@
+{
+  "name": "CryptoInsight AI",
+  "description": "A Gemini-powered crypto analytics dashboard that visualizes coin data using interactive charts.",
+  "requestFramePermissions": [
+    "microphone"
+  ]
+}
