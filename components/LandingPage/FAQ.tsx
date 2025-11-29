@@ -33,7 +33,7 @@ const FAQ: React.FC = () => {
             />
             <FAQItem 
                 q="Which chains do you support?" 
-                a="For direct transaction execution (Send/Swap), we currently support Ethereum Mainnet and Sepolia Testnet via MetaMask. However, our AI Market Intelligence engine is chain-agnostic. It can analyze price action, sentiment, and fundamental data for over 10,000 cryptocurrencies across Solana, Binance Smart Chain, Polygon, Avalanche, and more using data from CoinGecko and other real-time aggregators." 
+                a="For direct transaction execution (Send/Swap), we support multiple major EVM networks including Ethereum Mainnet, Binance Smart Chain (BSC), Polygon, and Avalanche C-Chain via MetaMask. Our AI Market Intelligence engine is also chain-agnostic, capable of analyzing price action, sentiment, and fundamental data for over 10,000 cryptocurrencies across Solana, Cosmos, and more using real-time data aggregators." 
             />
             <FAQItem 
                 q="Is the AI analysis financial advice?" 
