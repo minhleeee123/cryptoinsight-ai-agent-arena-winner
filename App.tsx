@@ -1,6 +1,7 @@
+
 import React, { useState, useRef, useEffect } from 'react';
 import { TrendingUp, PieChart, ArrowRightLeft } from 'lucide-react';
-import { ChatMessage, CryptoData, ChatSession, PortfolioItem, TransactionData } from './types';
+import { ChatMessage, CryptoData, ChatSession, PortfolioItem, TransactionData, PortfolioAnalysisResult } from './types';
 
 // Modular Services Imports
 import { analyzeCoin, generateMarketReport } from './services/agents/marketAgent';
@@ -290,10 +291,15 @@ const App: React.FC = () => {
 
       } else if (intent.type === 'PORTFOLIO_ANALYSIS') {
         setLoadingStatus('analyzing-portfolio');
-        const reportText = await analyzePortfolio(userProfile.portfolio);
+        const portfolioResult: PortfolioAnalysisResult = await analyzePortfolio(userProfile.portfolio);
         setLoadingStatus('');
-        const reportMsgId = (Date.now() + 1).toString();
-        setMessages(prev => [...prev, { id: reportMsgId, role: 'model', text: reportText }]);
+        const portfolioMsg: ChatMessage = {
+            id: (Date.now() + 1).toString(),
+            role: 'model',
+            portfolioAnalysis: portfolioResult,
+            text: "I've analyzed your portfolio structure. Here is the breakdown along with risk factors and rebalancing suggestions."
+        }
+        setMessages(prev => [...prev, portfolioMsg]);
 
       } else if (intent.type === 'TRANSACTION') {
         setLoadingStatus('creating-transaction');
