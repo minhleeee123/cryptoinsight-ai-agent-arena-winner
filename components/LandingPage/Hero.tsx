@@ -1,5 +1,7 @@
+
 import React from 'react';
 import { ArrowRight, Bot } from 'lucide-react';
+import TechAvatar from './TechAvatar';
 
 interface HeroProps {
   onStart: () => void;
@@ -7,10 +9,13 @@ interface HeroProps {
 
 const Hero: React.FC<HeroProps> = ({ onStart }) => {
   return (
-    <main className="relative z-10 max-w-7xl mx-auto px-6 pt-32 pb-20 flex flex-col items-center text-center">
-        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-400 text-xs font-semibold uppercase tracking-wider mb-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
-            <Bot className="w-3 h-3" />
-            Powered by Gemini 2.5 Flash
+    <main className="relative z-10 max-w-7xl mx-auto px-6 pt-20 pb-20 flex flex-col items-center text-center">
+        
+        {/* 3D Tech Avatar Container */}
+        <div className="w-full h-[250px] md:h-[300px] mb-2 relative animate-in fade-in zoom-in duration-1000">
+            <TechAvatar />
+            {/* Subtle Label under the model */}
+            
         </div>
 
         <h1 className="text-5xl md:text-7xl font-bold tracking-tight mb-6 max-w-4xl animate-in fade-in slide-in-from-bottom-6 duration-700">
