@@ -274,7 +274,7 @@ const DeepDive: React.FC = () => {
                      <ul className="space-y-3 pt-4">
                         <CheckItem text="Natural Language Intent Parsing" />
                         <CheckItem text="Gas Estimation & Simulation" />
-                        <CheckItem text="Supports Ethereum, BSC, Polygon" />
+                        <CheckItem text="Ethereum Mainnet via MetaMask" />
                     </ul>
                 </div>
 

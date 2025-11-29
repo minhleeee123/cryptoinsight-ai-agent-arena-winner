@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { ChevronUp, ChevronDown } from 'lucide-react';
 
@@ -28,15 +29,15 @@ const FAQ: React.FC = () => {
          <div className="space-y-4">
             <FAQItem 
                 q="Is my private key safe?" 
-                a="Absolutely. We never ask for your private key. All transactions are constructed by the AI but must be signed by your own wallet (MetaMask)." 
+                a="Absolutely. Security is our top priority. We never ask for, store, or have access to your private keys or recovery phrases. The AI merely constructs the transaction data payload for you. This payload is then passed to your browser wallet (like MetaMask), where you review the full details and explicitly sign the transaction yourself. You remain in full control of your assets at all times." 
             />
             <FAQItem 
                 q="Which chains do you support?" 
-                a="Currently we support Ethereum Mainnet (ERC-20) via MetaMask wallet. Market analysis covers 10,000+ coins across all chains via CoinGecko." 
+                a="For direct transaction execution (Send/Swap), we currently support Ethereum Mainnet and Sepolia Testnet via MetaMask. However, our AI Market Intelligence engine is chain-agnostic. It can analyze price action, sentiment, and fundamental data for over 10,000 cryptocurrencies across Solana, Binance Smart Chain, Polygon, Avalanche, and more using data from CoinGecko and other real-time aggregators." 
             />
             <FAQItem 
                 q="Is the AI analysis financial advice?" 
-                a="No. CryptoInsight AI provides data-driven insights and technical analysis patterns, but all trading decisions are your own responsibility." 
+                a="No, the information provided by CryptoInsight AI is for educational and informational purposes only. While our AI aggregates vast amounts of market data, technical indicators, and sentiment metrics to highlight potential opportunities, it cannot predict the future with certainty. Cryptocurrency trading involves significant risk. Always conduct your own research (DYOR) and consult with a qualified financial advisor before making investment decisions." 
             />
          </div>
       </section>
