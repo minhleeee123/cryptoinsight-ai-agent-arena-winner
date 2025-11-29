@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect } from 'react';
 import { TrendingUp, PieChart, ArrowRightLeft } from 'lucide-react';
 import { ChatMessage, CryptoData, ChatSession, PortfolioItem, TransactionData } from './types';
@@ -19,7 +18,7 @@ import ProfileView from './components/profile/ProfileView';
 import MessageItem from './components/chat/MessageItem';
 import InputArea from './components/chat/InputArea';
 import LoadingIndicator from './components/ui/LoadingIndicator';
-import LandingPage from './components/LandingPage';
+import LandingPage from './components/LandingPage/index';
 
 // --- Types & Mock Data for Profile ---
 
