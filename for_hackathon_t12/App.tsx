@@ -12,7 +12,7 @@ import {
   analyzePortfolio,
   createTransactionPreview,
   updatePortfolioRealTime
-} from './services/backendClient';ggg
+} from './services/backendClient';
 
 import { connectToMetaMask } from './services/web3Service';
 
