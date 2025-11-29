@@ -2,6 +2,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Maximize2, X, Send, Camera, Bot, Loader2 } from 'lucide-react';
 import { analyzeChartImage } from '../../services/agents/visionAgent';
+import { FormattedMessage } from '../ui/MarkdownRenderer';
 
 interface PriceChartProps {
   symbol: string; // e.g. "BTC", "SOL"
@@ -245,12 +246,16 @@ const PriceChart: React.FC<PriceChartProps> = ({ symbol, theme = 'dark' }) => {
                              <div className="flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar">
                                 {chatMessages.map((msg) => (
                                     <div key={msg.id} className={`flex flex-col ${msg.role === 'user' ? 'items-end' : 'items-start'}`}>
-                                        <div className={`max-w-[90%] px-4 py-3 rounded-2xl text-sm whitespace-pre-wrap ${
+                                        <div className={`max-w-[90%] px-4 py-3 rounded-2xl text-sm ${
                                             msg.role === 'user' 
-                                                ? 'bg-blue-600 text-white rounded-br-none' 
+                                                ? 'bg-blue-600 text-white rounded-br-none whitespace-pre-wrap' 
                                                 : 'bg-white dark:bg-[#2d2e2f] text-gray-800 dark:text-gray-200 rounded-bl-none border border-gray-200 dark:border-white/5 shadow-sm'
                                         }`}>
-                                            {msg.text}
+                                            {msg.role === 'user' ? (
+                                                msg.text
+                                            ) : (
+                                                <FormattedMessage text={msg.text} />
+                                            )}
                                         </div>
                                         <span className="text-[10px] text-gray-500 mt-1">
                                             {msg.role === 'user' ? 'You' : 'Analyst Agent'}
