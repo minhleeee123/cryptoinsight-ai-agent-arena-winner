@@ -121,7 +121,7 @@ Expected output:
 ```
   VITE v6.2.0  ready in 500 ms
 
-  ➜  Local:   http://localhost:5173/
+  ➜  Local:   http://localhost:3000/
   ➜  Network: use --host to expose
 ```
 
@@ -129,7 +129,7 @@ Expected output:
 
 Open your browser and navigate to:
 ```
-http://localhost:5173
+http://localhost:3000
 ```
 
 You should see the CryptoInsight AI landing page!

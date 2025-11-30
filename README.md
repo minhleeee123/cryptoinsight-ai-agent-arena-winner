@@ -59,7 +59,7 @@ cd ../for_hackathon_t12
 npm install
 npm run dev
 
-# 4. Open browser at http://localhost:5173
+# 4. Open browser at http://localhost:3000
 ```
 
 ---
@@ -489,7 +489,7 @@ cd for_hackathon_t12
 npm run dev
 ```
 
-Frontend runs on `http://localhost:5173` with hot module replacement.
+Frontend runs on `http://localhost:3000` with hot module replacement.
 
 ---
 
