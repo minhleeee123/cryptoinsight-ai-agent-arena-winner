@@ -27,13 +27,50 @@
 
 </div>
 
+## Table of Contents
+
+- [Quick Start](#quick-start)
+- [Installation & Usage Guide](./INSTALLATION.md) (Detailed)
+- [System Architecture](#system-architecture)
+- [Backend Architecture](#backend-architecture-detailed)
+- [API Reference](#api-endpoints-reference)
+- [Troubleshooting](#troubleshooting)
+
+---
+
+## Quick Start
+
+Get up and running in 5 minutes:
+
+```bash
+# 1. Clone the repository
+git clone https://github.com/minhleeee123/for_hackathon_t12.git
+cd for_hackathon_t12
+
+# 2. Setup Backend
+cd backend_for_hackathon_t12
+npm install
+# Create .env file and add your Gemini API key
+echo "GOOGLE_GENERATIVE_AI_API_KEY=your_api_key_here" > .env
+npm run dev
+
+# 3. Setup Frontend (in new terminal)
+cd ../for_hackathon_t12
+npm install
+npm run dev
+
+# 4. Open browser at http://localhost:5173
+```
+
+---
+
 ## Overview
 
 A comprehensive cryptocurrency analysis and portfolio management platform powered by AI agents and real-time blockchain data.
 
-## Overview
-
 CryptoInsight AI is a full-stack application that combines AI-powered analysis with real-time cryptocurrency data to provide intelligent insights, portfolio management, transaction assistance, and visual chart analysis. The system leverages Google's Gemini AI through the IQ ADK (Agent Development Kit) to create specialized AI agents for different crypto-related tasks.
+
+---
 
 ## System Architecture
 
