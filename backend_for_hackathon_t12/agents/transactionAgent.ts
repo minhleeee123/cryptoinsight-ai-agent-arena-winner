@@ -58,6 +58,11 @@ export async function createTransactionPreview(userText: string): Promise<Transa
     // Parse result (could be string or object)
     let parsedResult: any;
     if (typeof response === 'string') {
+      // Check if response is an error message
+      if (response.startsWith('Error:') || response.includes('quota') || response.includes('exceeded')) {
+        throw new Error('API quota exceeded. Please wait and try again later.');
+      }
+      
       // Try to extract JSON from markdown code blocks if present
       const jsonMatch = response.match(/```json\s*([\s\S]*?)\s*```/);
       if (jsonMatch) {
@@ -69,8 +74,14 @@ export async function createTransactionPreview(userText: string): Promise<Transa
       parsedResult = response;
     }
     return parsedResult as TransactionData;
-  } catch (error) {
+  } catch (error: any) {
     console.error("Transaction Parse Error:", error);
+    
+    // Handle quota errors specifically
+    if (error.message?.includes('quota') || error.message?.includes('429') || error.message?.includes('RESOURCE_EXHAUSTED')) {
+      throw new Error('API quota exceeded. Please try again in a few seconds.');
+    }
+    
     throw error;
   }
 }

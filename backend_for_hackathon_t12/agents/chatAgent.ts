@@ -64,6 +64,12 @@ Classify user intent:
     // Parse result (could be string or object)
     let parsedResult: any;
     if (typeof response === 'string') {
+      // Check if response is an error message
+      if (response.startsWith('Error:') || response.includes('quota') || response.includes('exceeded')) {
+        console.warn('Intent classification failed due to quota, defaulting to CHAT');
+        return { type: 'CHAT' };
+      }
+      
       // Try to extract JSON from markdown code blocks if present
       const jsonMatch = response.match(/```json\s*([\s\S]*?)\s*```/);
       if (jsonMatch) {
@@ -75,7 +81,8 @@ Classify user intent:
       parsedResult = response;
     }
     return parsedResult;
-  } catch {
+  } catch (error: any) {
+    console.warn('Intent classification error:', error.message);
     return { type: 'CHAT' };
   }
 }

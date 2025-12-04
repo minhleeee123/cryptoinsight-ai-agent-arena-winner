@@ -1,14 +1,14 @@
 // Test Gemini API Key
 import { GoogleGenerativeAI } from '@google/generative-ai';
 
-const API_KEY = 'AIzaSyDZxc4cLwVSwz4nnDFYVSV6ilkeSCfB2kQ';
+const API_KEY = 'AIzaSyCCXyqNsqe1Ng2_15VH8V7QfI6usBCtuxM';
 
 async function testApiKey() {
   console.log('🧪 Testing Gemini API Key...\n');
   
   try {
     const genAI = new GoogleGenerativeAI(API_KEY);
-    const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash-exp' });
+    const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
     
     console.log('📤 Sending test request...');
     const result = await model.generateContent('Say hello in Vietnamese');

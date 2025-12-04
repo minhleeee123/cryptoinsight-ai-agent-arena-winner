@@ -5,6 +5,8 @@ import { analyzeChartImage } from '../../services/backendClient';
 import { FormattedMessage } from '../ui/MarkdownRenderer';
 interface PriceChartProps {
   symbol: string; // e.g. "BTC", "SOL"
+  coinName: string; // e.g. "Bitcoin", "Solana"
+  currentPrice: number; // e.g. 93358.15
   theme?: 'light' | 'dark';
 }
 
@@ -21,7 +23,7 @@ declare global {
   }
 }
 
-const PriceChart: React.FC<PriceChartProps> = ({ symbol, theme = 'dark' }) => {
+const PriceChart: React.FC<PriceChartProps> = ({ symbol, coinName, currentPrice, theme = 'dark' }) => {
   const containerId = useRef(`tv-widget-${Math.random().toString(36).substring(7)}`);
   const [isModalOpen, setIsModalOpen] = useState(false);
   
@@ -137,8 +139,11 @@ const PriceChart: React.FC<PriceChartProps> = ({ symbol, theme = 'dark' }) => {
         setChatMessages(prev => [...prev, { id: userMsgId, role: 'user', text: "Analyze the chart lines I just drew." }]);
         
         const modelMsgId = (Date.now() + 1).toString();
-        // Call non-streaming service
-        const analysisText = await analyzeChartImage(base64Image, "Analyze the technical indicators, support/resistance levels, and chart patterns visible in this image. Provide a trading setup recommendation.");
+        // Call non-streaming service with coin context
+        const analysisText = await analyzeChartImage(
+          base64Image, 
+          `Analyze this ${coinName} chart at current price $${currentPrice.toLocaleString()}. Focus on the drawn lines and patterns, support/resistance levels, and provide a trading setup recommendation.`
+        );
 
         // Update with full response
         setChatMessages(prev => [...prev, { id: modelMsgId, role: 'model', text: analysisText, isAnalysis: true }]);

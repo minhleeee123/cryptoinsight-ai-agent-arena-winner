@@ -79,6 +79,11 @@ Generate complete JSON with ALL ${portfolio.length} positions included.`;
     // Parse result (could be string or object)
     let parsedResult: any;
     if (typeof response === 'string') {
+      // Check if response is an error message
+      if (response.startsWith('Error:') || response.includes('quota') || response.includes('exceeded')) {
+        throw new Error('API quota exceeded. Please wait and try again later.');
+      }
+      
       // Try to extract JSON from markdown code blocks if present
       const jsonMatch = response.match(/```json\s*([\s\S]*?)\s*```/);
       if (jsonMatch) {
@@ -90,8 +95,14 @@ Generate complete JSON with ALL ${portfolio.length} positions included.`;
       parsedResult = response;
     }
     return parsedResult as PortfolioAnalysisResult;
-  } catch (error) {
+  } catch (error: any) {
     console.error("Portfolio Agent Error:", error);
+    
+    // Handle quota errors specifically
+    if (error.message?.includes('quota') || error.message?.includes('429') || error.message?.includes('RESOURCE_EXHAUSTED')) {
+      throw new Error('API quota exceeded. Please wait 16 seconds and try again, or use a different API key.');
+    }
+    
     throw error;
   }
 }
