@@ -521,84 +521,84 @@ graph LR
 #### Detailed System Architecture
 
 ```mermaid
-graph TB
-    subgraph Frontend["FRONTEND (React 19 + Vite)"]
-        LP[Landing Page]
-        DB[Dashboard]
-        CH[Chat UI]
-        PF[Portfolio View]
+graph LR
+    %% --- STYLE DEFINITIONS ---
+    classDef frontend fill:#e0f2fe,stroke:#0284c7,stroke-width:2px,color:#0c4a6e;
+    classDef backend fill:#dcfce7,stroke:#16a34a,stroke-width:2px,color:#14532d;
+    classDef agents fill:#ffedd5,stroke:#ea580c,stroke-width:2px,color:#7c2d12;
+    classDef utils fill:#f3e8ff,stroke:#9333ea,stroke-width:2px,stroke-dasharray: 5 5,color:#581c87;
+    classDef external fill:#f1f5f9,stroke:#475569,stroke-width:1px,stroke-dasharray: 3 3,color:#1e293b;
+    classDef mainNode fill:#ffffff,stroke:#333,stroke-width:3px;
+
+    %% --- FRONTEND LAYER ---
+    subgraph Frontend ["📱 FRONTEND (React 19 + Vite)"]
+        direction TB
+        LP([Landing Page])
+        DB([Dashboard])
+        CH([Chat UI])
+        PF([Portfolio View])
     end
-    
-    subgraph Backend["EXPRESS SERVER :3001"]
-        API[API Routes]
+
+    %% --- BACKEND LAYER ---
+    subgraph Backend ["⚙️ EXPRESS SERVER :3001"]
+        API[API Routes / Controller]:::mainNode
         
-        subgraph Agents["IQ ADK Agent Orchestrator"]
-            CA[Chat Agent<br/>Intent Classification]
-            MA[Market Agent<br/>Crypto Analysis]
-            PA[Portfolio Agent<br/>Asset Management]
-            TA[Transaction Agent<br/>Web3 Parsing]
-            VA[Vision Agent<br/>Chart Analysis]
+        subgraph Agents ["🧠 IQ ADK Agent Orchestrator"]
+            direction TB
+            CA{{Chat Agent<br/>Intent Class}}
+            MA{{Market Agent<br/>Crypto Analysis}}
+            PA{{Portfolio Agent<br/>Asset Mgmt}}
+            TA{{Transaction Agent<br/>Web3 Parsing}}
+            VA{{Vision Agent<br/>Chart Analysis}}
         end
         
-        subgraph Utils["Utility Layer"]
-            CB[Callbacks System<br/>Monitoring]
-            CM[Cache Manager<br/>In-Memory]
-            SS[Session Store<br/>Multi-User]
+        subgraph Utils ["🛠️ Utility & Storage Layer"]
+            direction TB
+            CB[(Callbacks System)]
+            CM[(Cache Manager<br/>In-Memory)]
+            SS[(Session Store)]
         end
     end
     
-    subgraph External["External Services"]
+    %% --- EXTERNAL SERVICES ---
+    subgraph External ["☁️ External Services"]
+        direction TB
         GM[Google Gemini 2.5<br/>via IQ ADK]
-        CG[CoinGecko API<br/>Price Data]
-        BN[Binance API<br/>Long/Short]
-        AL[Alternative.me<br/>Fear & Greed]
-        ZD[Zod Schemas<br/>Validation]
+        CG[CoinGecko API]
+        BN[Binance API]
+        AL[Alternative.me]
+        ZD[Zod Schemas]
     end
+
+    %% --- CONNECTIONS ---
+    %% Frontend to API
+    LP & DB & CH & PF --> API
     
-    LP --> API
-    DB --> API
-    CH --> API
-    PF --> API
+    %% API to Agents
+    API ==> CA & MA & PA & TA & VA
     
-    API --> CA
-    API --> MA
-    API --> PA
-    API --> TA
-    API --> VA
+    %% Agents to Utils (Callbacks)
+    CA & MA & PA & TA & VA -.-> CB
     
-    CA --> CB
-    MA --> CB
-    PA --> CB
-    TA --> CB
-    VA --> CB
+    %% Agents to Cache/Session
+    CA & MA & PA -.-> CM
+    CA -.-> SS
     
-    CA --> CM
-    MA --> CM
-    PA --> CM
+    %% Agents to Gemini (AI Core)
+    CA & MA & PA & TA & VA ==AI Logic==> GM
     
-    CA --> SS
-    
-    CA --> GM
-    MA --> GM
-    PA --> GM
-    TA --> GM
-    VA --> GM
-    
-    MA --> CG
-    MA --> BN
-    MA --> AL
+    %% Agents to Data Sources
+    MA --> CG & BN & AL
     PA --> CG
     
-    MA --> ZD
-    PA --> ZD
-    TA --> ZD
-    CA --> ZD
-    
-    style Frontend fill:#1e3a8a
-    style Backend fill:#166534
-    style Agents fill:#7c2d12
-    style Utils fill:#78350f
-    style External fill:#4c1d95
+    %% Validation
+    MA & PA & TA & CA -.-> ZD
+
+    %% --- APPLY STYLES ---
+    class LP,DB,CH,PF frontend;
+    class CA,MA,PA,TA,VA agents;
+    class CB,CM,SS utils;
+    class GM,CG,BN,AL,ZD external;
 ```
 
 </div>
