@@ -48,14 +48,14 @@ git clone https://github.com/minhleeee123/for_hackathon_t12.git
 cd for_hackathon_t12
 
 # 2. Setup Backend
-cd backend_for_hackathon_t12
+cd backend
 npm install
 # Create .env file and add your Gemini API key
 echo "GOOGLE_GENERATIVE_AI_API_KEY=your_api_key_here" > .env
 npm run dev
 
 # 3. Setup Frontend (in new terminal)
-cd ../for_hackathon_t12
+cd ../frontend
 npm install
 npm run dev
 

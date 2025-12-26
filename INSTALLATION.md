@@ -22,7 +22,7 @@ cd for_hackathon_t12
 
 ```bash
 # Navigate to backend directory
-cd backend_for_hackathon_t12
+cd backend
 
 # Install dependencies
 npm install
@@ -30,7 +30,7 @@ npm install
 
 ### Step 3: Configure Environment Variables
 
-Create a `.env` file in the `backend_for_hackathon_t12` directory:
+Create a `.env` file in the `backend` directory:
 
 ```bash
 # Windows PowerShell
@@ -59,7 +59,7 @@ NODE_ENV=development
 ### Step 4: Test Your API Key (Optional but Recommended)
 
 ```bash
-# Still in backend_for_hackathon_t12 directory
+# Still in backend directory
 npx tsx test-api-key.ts
 ```
 
@@ -97,7 +97,7 @@ curl http://localhost:3001/health
 Open a **new terminal** and navigate to frontend directory:
 
 ```bash
-cd for_hackathon_t12
+cd frontend
 
 # Install dependencies
 npm install
